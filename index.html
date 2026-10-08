@@ -533,8 +533,6 @@ button{
     text-decoration:underline;
 }
 
-/* ================= FOLDER HINT ================= */
-
 .folder-path-info{
     color:#74809b;
     font-size:12px;
@@ -617,6 +615,82 @@ button{
     cursor:not-allowed;
 }
 
+/* ================= UPLOAD PROGRESS ================= */
+
+.upload-progress-box{
+    display:none;
+    background:#0b1122;
+    border:1px solid #293657;
+    border-radius:13px;
+    padding:15px;
+    margin-top:15px;
+}
+
+.upload-progress-box.show{
+    display:block;
+}
+
+.upload-progress-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    margin-bottom:9px;
+}
+
+.upload-progress-name{
+    color:#cbd3e5;
+    font-size:12px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    max-width:75%;
+}
+
+.upload-progress-percent{
+    color:#8fa5ff;
+    font-size:13px;
+    font-weight:bold;
+}
+
+.upload-progress-track{
+    width:100%;
+    height:9px;
+    background:#202b45;
+    border-radius:999px;
+    overflow:hidden;
+}
+
+.upload-progress-bar{
+    width:0%;
+    height:100%;
+    background:linear-gradient(90deg,#667eea,#8b5cf6);
+    border-radius:999px;
+    transition:width:.15s ease;
+}
+
+.upload-progress-status{
+    color:#74809b;
+    font-size:11px;
+    margin-top:8px;
+}
+
+.upload-progress-box.success{
+    border-color:#245b3d;
+}
+
+.upload-progress-box.success .upload-progress-bar{
+    background:#22c55e;
+}
+
+.upload-progress-box.error{
+    border-color:#6d2938;
+}
+
+.upload-progress-box.error .upload-progress-bar{
+    background:#ef4444;
+}
+
 /* ================= QUIZ ================= */
 
 .quiz-question{
@@ -649,8 +723,6 @@ button{
     text-align:center;
     margin-top:15px;
 }
-
-/* ================= SELECT FOLDER ================= */
 
 .folder-select option{
     background:#0b1122;
@@ -755,7 +827,6 @@ button{
         <form id="loginForm">
 
             <div class="form-group">
-
                 <label>Username</label>
 
                 <input
@@ -765,11 +836,9 @@ button{
                     autocomplete="username"
                     required
                 >
-
             </div>
 
             <div class="form-group">
-
                 <label>Password</label>
 
                 <input
@@ -779,7 +848,6 @@ button{
                     autocomplete="current-password"
                     required
                 >
-
             </div>
 
             <button
@@ -810,315 +878,289 @@ button{
 
 <div class="app">
 
-    <!-- ================= SIDEBAR ================= -->
+<aside class="sidebar" id="sidebar">
 
-    <aside class="sidebar" id="sidebar">
+    <div class="brand">
 
-        <div class="brand">
-
-            <div class="brand-icon">
-                📚
-            </div>
-
-            <div class="brand-text">
-
-                <h2>My Subject</h2>
-
-                <span>
-                    Study Manager
-                </span>
-
-            </div>
-
-        </div>
-
-        <div class="menu-title">
-            Kategori
-        </div>
-
-        <button
-            class="nav-btn active"
-            data-category="materi"
-        >
+        <div class="brand-icon">
             📚
-            <span>Materi</span>
-        </button>
+        </div>
+
+        <div class="brand-text">
+
+            <h2>My Subject</h2>
+
+            <span>
+                Study Manager
+            </span>
+
+        </div>
+
+    </div>
+
+    <div class="menu-title">
+        Kategori
+    </div>
+
+    <button
+        class="nav-btn active"
+        data-category="materi"
+    >
+        📚
+        <span>Materi</span>
+    </button>
+
+    <button
+        class="nav-btn"
+        data-category="ide"
+    >
+        💡
+        <span>Ide Kreatif</span>
+    </button>
+
+    <button
+        class="nav-btn"
+        data-category="hikmah"
+    >
+        📝
+        <span>Pelajaran / Hikmah</span>
+    </button>
+
+    <div class="sidebar-bottom">
+
+        <div class="cloud-status">
+
+            <span
+                class="status-dot"
+                id="statusDot"
+            ></span>
+
+            <span id="cloudStatus">
+                Menunggu Firebase...
+            </span>
+
+        </div>
 
         <button
-            class="nav-btn"
-            data-category="ide"
+            class="logout-btn"
+            id="logoutBtn"
         >
-            💡
-            <span>Ide Kreatif</span>
+            🚪 Keluar
         </button>
 
-        <button
-            class="nav-btn"
-            data-category="hikmah"
-        >
-            📝
-            <span>Pelajaran / Hikmah</span>
-        </button>
+    </div>
 
-        <div class="sidebar-bottom">
+</aside>
 
-            <div class="cloud-status">
 
-                <span
-                    class="status-dot"
-                    id="statusDot"
-                ></span>
+<main class="main">
 
-                <span id="cloudStatus">
-                    Menunggu Firebase...
-                </span>
+    <div class="topbar">
+
+        <div class="page-title">
+
+            <div
+                style="
+                    display:flex;
+                    align-items:center;
+                    gap:10px;
+                "
+            >
+
+                <button
+                    class="mobile-menu"
+                    id="mobileMenu"
+                >
+                    ☰
+                </button>
+
+                <div>
+
+                    <h1 id="pageTitle">
+                        Materi
+                    </h1>
+
+                    <p id="pageSubtitle">
+                        Semua materi dan file pembelajaranmu.
+                    </p>
+
+                </div>
 
             </div>
 
+        </div>
+
+
+        <div class="top-actions">
+
             <button
-                class="logout-btn"
-                id="logoutBtn"
+                class="secondary-btn"
+                id="backBtn"
+                style="display:none"
             >
-                🚪 Keluar
+                ← Kembali
+            </button>
+
+            <button
+                class="secondary-btn"
+                id="addFolderBtn"
+            >
+                + Kelompok
+            </button>
+
+            <button
+                class="primary-btn"
+                id="uploadBtn"
+            >
+                ⬆ Upload File
             </button>
 
         </div>
 
-    </aside>
+    </div>
 
 
-    <!-- ================= MAIN ================= -->
+    <div
+        class="breadcrumb"
+        id="breadcrumb"
+    ></div>
 
-    <main class="main">
 
-        <div class="topbar">
+    <div class="search-box">
 
-            <div class="page-title">
+        🔍
 
-                <div
-                    style="
-                        display:flex;
-                        align-items:center;
-                        gap:10px;
-                    "
-                >
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="Cari kelompok, file, catatan, atau kuis..."
+        >
 
-                    <button
-                        class="mobile-menu"
-                        id="mobileMenu"
-                    >
-                        ☰
-                    </button>
+        <button
+            class="search-clear"
+            id="searchClear"
+        >
+            ✕
+        </button>
 
-                    <div>
+    </div>
 
-                        <h1 id="pageTitle">
-                            Materi
-                        </h1>
 
-                        <p id="pageSubtitle">
-                            Semua materi dan file pembelajaranmu.
-                        </p>
+    <div class="stats">
 
-                    </div>
+        <div class="stat-card">
 
-                </div>
+            <div class="stat-icon">📁</div>
 
+            <div
+                class="stat-value"
+                id="folderCount"
+            >
+                0
             </div>
 
-
-            <div class="top-actions">
-
-                <button
-                    class="secondary-btn"
-                    id="backBtn"
-                    style="display:none"
-                >
-                    ← Kembali
-                </button>
-
-                <button
-                    class="secondary-btn"
-                    id="addFolderBtn"
-                >
-                    + Kelompok
-                </button>
-
-                <button
-                    class="primary-btn"
-                    id="uploadBtn"
-                >
-                    ⬆ Upload File
-                </button>
-
+            <div class="stat-label">
+                Kelompok
             </div>
 
         </div>
 
+        <div class="stat-card">
 
-        <!-- ================= BREADCRUMB ================= -->
+            <div class="stat-icon">📎</div>
 
-        <div
-            class="breadcrumb"
-            id="breadcrumb"
-        ></div>
-
-
-        <!-- ================= SEARCH ================= -->
-
-        <div class="search-box">
-
-            🔍
-
-            <input
-                type="text"
-                id="searchInput"
-                placeholder="Cari kelompok, file, catatan, atau kuis..."
+            <div
+                class="stat-value"
+                id="fileCount"
             >
+                0
+            </div>
+
+            <div class="stat-label">
+                File
+            </div>
+
+        </div>
+
+        <div class="stat-card">
+
+            <div class="stat-icon">📝</div>
+
+            <div
+                class="stat-value"
+                id="noteCount"
+            >
+                0
+            </div>
+
+            <div class="stat-label">
+                Catatan
+            </div>
+
+        </div>
+
+        <div class="stat-card">
+
+            <div class="stat-icon">❓</div>
+
+            <div
+                class="stat-value"
+                id="quizCount"
+            >
+                0
+            </div>
+
+            <div class="stat-label">
+                Kuis
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="section-header">
+
+        <div>
+
+            <h2 id="contentTitle">
+                Kelompok Materi
+            </h2>
+
+            <div
+                class="folder-path-info"
+                id="folderPathInfo"
+            ></div>
+
+        </div>
+
+        <div class="section-actions">
 
             <button
-                class="search-clear"
-                id="searchClear"
+                class="small-btn"
+                id="addNoteBtn"
             >
-                ✕
+                + Catatan
+            </button>
+
+            <button
+                class="small-btn"
+                id="addQuizBtn"
+            >
+                + Kuis
             </button>
 
         </div>
 
-
-        <!-- ================= STATS ================= -->
-
-        <div class="stats">
-
-            <div class="stat-card">
-
-                <div class="stat-icon">
-                    📁
-                </div>
-
-                <div
-                    class="stat-value"
-                    id="folderCount"
-                >
-                    0
-                </div>
-
-                <div class="stat-label">
-                    Kelompok
-                </div>
-
-            </div>
+    </div>
 
 
-            <div class="stat-card">
+    <div
+        class="content-grid"
+        id="contentGrid"
+    ></div>
 
-                <div class="stat-icon">
-                    📎
-                </div>
-
-                <div
-                    class="stat-value"
-                    id="fileCount"
-                >
-                    0
-                </div>
-
-                <div class="stat-label">
-                    File
-                </div>
-
-            </div>
-
-
-            <div class="stat-card">
-
-                <div class="stat-icon">
-                    📝
-                </div>
-
-                <div
-                    class="stat-value"
-                    id="noteCount"
-                >
-                    0
-                </div>
-
-                <div class="stat-label">
-                    Catatan
-                </div>
-
-            </div>
-
-
-            <div class="stat-card">
-
-                <div class="stat-icon">
-                    ❓
-                </div>
-
-                <div
-                    class="stat-value"
-                    id="quizCount"
-                >
-                    0
-                </div>
-
-                <div class="stat-label">
-                    Kuis
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- ================= CONTENT HEADER ================= -->
-
-        <div class="section-header">
-
-            <div>
-
-                <h2 id="contentTitle">
-                    Kelompok Materi
-                </h2>
-
-                <div
-                    class="folder-path-info"
-                    id="folderPathInfo"
-                ></div>
-
-            </div>
-
-
-            <div class="section-actions">
-
-                <button
-                    class="small-btn"
-                    id="addNoteBtn"
-                >
-                    + Catatan
-                </button>
-
-                <button
-                    class="small-btn"
-                    id="addQuizBtn"
-                >
-                    + Kuis
-                </button>
-
-            </div>
-
-        </div>
-
-
-        <!-- ================= CONTENT ================= -->
-
-        <div
-            class="content-grid"
-            id="contentGrid"
-        ></div>
-
-    </main>
+</main>
 
 </div>
 
@@ -1134,110 +1176,98 @@ button{
     id="folderModal"
 >
 
-    <div class="modal">
+<div class="modal">
 
-        <h2 id="folderModalTitle">
-            Tambah Kelompok
-        </h2>
+<h2 id="folderModalTitle">
+    Tambah Kelompok
+</h2>
 
-        <form id="folderForm">
+<form id="folderForm">
 
-            <div class="modal-group">
+<div class="modal-group">
 
-                <label>
-                    Nama kelompok
-                </label>
+<label>Nama kelompok</label>
 
-                <input
-                    type="text"
-                    id="folderName"
-                    placeholder="Contoh: Sistem Digital"
-                    required
-                >
+<input
+    type="text"
+    id="folderName"
+    placeholder="Contoh: Sistem Digital"
+    required
+>
 
-            </div>
+</div>
 
+<div class="modal-group">
 
-            <div class="modal-group">
+<label>Deskripsi</label>
 
-                <label>
-                    Deskripsi
-                </label>
+<textarea
+    id="folderDescription"
+    placeholder="Deskripsi kelompok..."
+></textarea>
 
-                <textarea
-                    id="folderDescription"
-                    placeholder="Deskripsi kelompok..."
-                ></textarea>
+</div>
 
-            </div>
+<div class="modal-group">
 
+<label>Kategori</label>
 
-            <div class="modal-group">
+<select id="folderCategory">
 
-                <label>
-                    Kategori
-                </label>
+<option value="materi">
+📚 Materi
+</option>
 
-                <select id="folderCategory">
+<option value="ide">
+💡 Ide Kreatif
+</option>
 
-                    <option value="materi">
-                        📚 Materi
-                    </option>
+<option value="hikmah">
+📝 Pelajaran / Hikmah
+</option>
 
-                    <option value="ide">
-                        💡 Ide Kreatif
-                    </option>
+</select>
 
-                    <option value="hikmah">
-                        📝 Pelajaran / Hikmah
-                    </option>
+</div>
 
-                </select>
+<div
+    class="modal-group"
+    id="parentFolderInfo"
+    style="display:none"
+>
 
-            </div>
+<label>Kelompok induk</label>
 
+<input
+    type="text"
+    id="parentFolderName"
+    readonly
+>
 
-            <div
-                class="modal-group"
-                id="parentFolderInfo"
-                style="display:none"
-            >
+</div>
 
-                <label>
-                    Kelompok induk
-                </label>
+<div class="modal-actions">
 
-                <input
-                    type="text"
-                    id="parentFolderName"
-                    readonly
-                >
+<button
+    type="button"
+    class="close-btn"
+    data-close="folderModal"
+>
+Batal
+</button>
 
-            </div>
+<button
+    type="submit"
+    class="save-btn"
+>
+Simpan
+</button>
 
+</div>
 
-            <div class="modal-actions">
+</form>
 
-                <button
-                    type="button"
-                    class="close-btn"
-                    data-close="folderModal"
-                >
-                    Batal
-                </button>
-
-                <button
-                    type="submit"
-                    class="save-btn"
-                >
-                    Simpan
-                </button>
-
-            </div>
-
-        </form>
-
-    </div>
+</div>
 
 </div>
 
@@ -1251,80 +1281,71 @@ button{
     id="noteModal"
 >
 
-    <div class="modal">
+<div class="modal">
 
-        <h2 id="noteModalTitle">
-            Tambah Catatan
-        </h2>
+<h2 id="noteModalTitle">
+Tambah Catatan
+</h2>
 
-        <form id="noteForm">
+<form id="noteForm">
 
-            <div class="modal-group">
+<div class="modal-group">
 
-                <label>
-                    Judul
-                </label>
+<label>Judul</label>
 
-                <input
-                    type="text"
-                    id="noteTitle"
-                    required
-                >
+<input
+    type="text"
+    id="noteTitle"
+    required
+>
 
-            </div>
+</div>
 
+<div class="modal-group">
 
-            <div class="modal-group">
+<label>Catatan</label>
 
-                <label>
-                    Catatan
-                </label>
+<textarea
+    id="noteContent"
+    required
+    placeholder="Tulis catatan..."
+></textarea>
 
-                <textarea
-                    id="noteContent"
-                    required
-                    placeholder="Tulis catatan..."
-                ></textarea>
+</div>
 
-            </div>
+<div class="modal-group">
 
+<label>Lokasi</label>
 
-            <div class="modal-group">
+<select
+    id="noteFolder"
+    class="folder-select"
+></select>
 
-                <label>
-                    Lokasi
-                </label>
+</div>
 
-                <select
-                    id="noteFolder"
-                    class="folder-select"
-                ></select>
+<div class="modal-actions">
 
-            </div>
+<button
+    type="button"
+    class="close-btn"
+    data-close="noteModal"
+>
+Batal
+</button>
 
+<button
+    type="submit"
+    class="save-btn"
+>
+Simpan
+</button>
 
-            <div class="modal-actions">
+</div>
 
-                <button
-                    type="button"
-                    class="close-btn"
-                    data-close="noteModal"
-                >
-                    Batal
-                </button>
+</form>
 
-                <button
-                    type="submit"
-                    class="save-btn"
-                >
-                    Simpan
-                </button>
-
-            </div>
-
-        </form>
-
-    </div>
+</div>
 
 </div>
 
@@ -1338,78 +1359,115 @@ button{
     id="fileModal"
 >
 
-    <div class="modal">
+<div class="modal">
 
-        <h2>Upload File</h2>
+<h2>Upload File</h2>
 
-        <form id="fileForm">
+<form id="fileForm">
 
-            <div class="modal-group">
+<div class="modal-group">
 
-                <label>
-                    Pilih file
-                </label>
+<label>Pilih file</label>
 
-                <input
-                    type="file"
-                    id="fileInput"
-                    required
-                >
+<input
+    type="file"
+    id="fileInput"
+    required
+>
 
-            </div>
+</div>
 
+<div class="modal-group">
 
-            <div class="modal-group">
+<label>Lokasi</label>
 
-                <label>
-                    Lokasi
-                </label>
+<select
+    id="fileFolder"
+    class="folder-select"
+></select>
 
-                <select
-                    id="fileFolder"
-                    class="folder-select"
-                ></select>
+</div>
 
-            </div>
+<div class="modal-group">
 
+<label>Deskripsi</label>
 
-            <div class="modal-group">
+<textarea
+    id="fileDescription"
+    placeholder="Keterangan file..."
+></textarea>
 
-                <label>
-                    Deskripsi
-                </label>
-
-                <textarea
-                    id="fileDescription"
-                    placeholder="Keterangan file..."
-                ></textarea>
-
-            </div>
+</div>
 
 
-            <div class="modal-actions">
+<!-- ================= UPLOAD PROGRESS ================= -->
 
-                <button
-                    type="button"
-                    class="close-btn"
-                    data-close="fileModal"
-                >
-                    Batal
-                </button>
+<div
+    class="upload-progress-box"
+    id="uploadProgressBox"
+>
 
-                <button
-                    type="submit"
-                    class="save-btn"
-                    id="uploadSubmitBtn"
-                >
-                    Upload
-                </button>
+    <div class="upload-progress-top">
 
-            </div>
+        <div
+            class="upload-progress-name"
+            id="uploadProgressName"
+        >
+            Menunggu file...
+        </div>
 
-        </form>
+        <div
+            class="upload-progress-percent"
+            id="uploadProgressPercent"
+        >
+            0%
+        </div>
 
     </div>
+
+    <div class="upload-progress-track">
+
+        <div
+            class="upload-progress-bar"
+            id="uploadProgressBar"
+        ></div>
+
+    </div>
+
+    <div
+        class="upload-progress-status"
+        id="uploadProgressStatus"
+    >
+        Menunggu upload...
+    </div>
+
+</div>
+
+
+<div class="modal-actions">
+
+<button
+    type="button"
+    class="close-btn"
+    id="closeUploadModalBtn"
+    data-close="fileModal"
+>
+Batal
+</button>
+
+<button
+    type="submit"
+    class="save-btn"
+    id="uploadSubmitBtn"
+>
+Upload
+</button>
+
+</div>
+
+</form>
+
+</div>
 
 </div>
 
@@ -1423,157 +1481,133 @@ button{
     id="quizModal"
 >
 
-    <div class="modal">
+<div class="modal">
 
-        <h2>Tambah Kuis</h2>
+<h2>Tambah Kuis</h2>
 
-        <form id="quizForm">
+<form id="quizForm">
 
-            <div class="modal-group">
+<div class="modal-group">
 
-                <label>
-                    Judul kuis
-                </label>
+<label>Judul kuis</label>
 
-                <input
-                    type="text"
-                    id="quizTitle"
-                    required
-                    placeholder="Contoh: Kuis Sistem Digital"
-                >
+<input
+    type="text"
+    id="quizTitle"
+    required
+    placeholder="Contoh: Kuis Sistem Digital"
+>
 
-            </div>
+</div>
 
+<div class="modal-group">
 
-            <div class="modal-group">
+<label>Pertanyaan</label>
 
-                <label>
-                    Pertanyaan
-                </label>
+<textarea
+    id="quizQuestion"
+    required
+    placeholder="Tuliskan pertanyaan..."
+></textarea>
 
-                <textarea
-                    id="quizQuestion"
-                    required
-                    placeholder="Tuliskan pertanyaan..."
-                ></textarea>
+</div>
 
-            </div>
+<div class="modal-group">
 
+<label>Jawaban A</label>
 
-            <div class="modal-group">
+<input
+    type="text"
+    id="quizA"
+    required
+>
 
-                <label>
-                    Jawaban A
-                </label>
+</div>
 
-                <input
-                    type="text"
-                    id="quizA"
-                    required
-                >
+<div class="modal-group">
 
-            </div>
+<label>Jawaban B</label>
 
+<input
+    type="text"
+    id="quizB"
+    required
+>
 
-            <div class="modal-group">
+</div>
 
-                <label>
-                    Jawaban B
-                </label>
+<div class="modal-group">
 
-                <input
-                    type="text"
-                    id="quizB"
-                    required
-                >
+<label>Jawaban C</label>
 
-            </div>
+<input
+    type="text"
+    id="quizC"
+    required
+>
 
+</div>
 
-            <div class="modal-group">
+<div class="modal-group">
 
-                <label>
-                    Jawaban C
-                </label>
+<label>Jawaban D</label>
 
-                <input
-                    type="text"
-                    id="quizC"
-                    required
-                >
+<input
+    type="text"
+    id="quizD"
+    required
+>
 
-            </div>
+</div>
 
+<div class="modal-group">
 
-            <div class="modal-group">
+<label>Jawaban benar</label>
 
-                <label>
-                    Jawaban D
-                </label>
+<select id="quizAnswer">
 
-                <input
-                    type="text"
-                    id="quizD"
-                    required
-                >
+<option value="A">A</option>
+<option value="B">B</option>
+<option value="C">C</option>
+<option value="D">D</option>
 
-            </div>
+</select>
 
+</div>
 
-            <div class="modal-group">
+<div class="modal-group">
 
-                <label>
-                    Jawaban benar
-                </label>
+<label>Lokasi</label>
 
-                <select id="quizAnswer">
+<select
+    id="quizFolder"
+    class="folder-select"
+></select>
 
-                    <option value="A">A</option>
-                    <option value="B">B</option>
-                    <option value="C">C</option>
-                    <option value="D">D</option>
+</div>
 
-                </select>
+<div class="modal-actions">
 
-            </div>
+<button
+    type="button"
+    class="close-btn"
+    data-close="quizModal"
+>
+Batal
+</button>
 
+<button
+    type="submit"
+    class="save-btn"
+>
+Simpan
+</button>
 
-            <div class="modal-group">
+</div>
 
-                <label>
-                    Lokasi
-                </label>
+</form>
 
-                <select
-                    id="quizFolder"
-                    class="folder-select"
-                ></select>
-
-            </div>
-
-
-            <div class="modal-actions">
-
-                <button
-                    type="button"
-                    class="close-btn"
-                    data-close="quizModal"
-                >
-                    Batal
-                </button>
-
-                <button
-                    type="submit"
-                    class="save-btn"
-                >
-                    Simpan
-                </button>
-
-            </div>
-
-        </form>
-
-    </div>
+</div>
 
 </div>
 
@@ -1587,41 +1621,41 @@ button{
     id="quizRunModal"
 >
 
-    <div class="modal">
+<div class="modal">
 
-        <h2 id="runQuizTitle">
-            Kuis
-        </h2>
+<h2 id="runQuizTitle">
+Kuis
+</h2>
 
-        <div id="quizRunContent"></div>
+<div id="quizRunContent"></div>
 
-        <div class="modal-actions">
+<div class="modal-actions">
 
-            <button
-                type="button"
-                class="close-btn"
-                data-close="quizRunModal"
-            >
-                Tutup
-            </button>
+<button
+    type="button"
+    class="close-btn"
+    data-close="quizRunModal"
+>
+Tutup
+</button>
 
-            <button
-                type="button"
-                class="save-btn"
-                id="submitQuizBtn"
-            >
-                Periksa Jawaban
-            </button>
+<button
+    type="button"
+    class="save-btn"
+    id="submitQuizBtn"
+>
+Periksa Jawaban
+</button>
 
-        </div>
+</div>
 
-        <div
-            class="quiz-result"
-            id="quizResult"
-            style="display:none"
-        ></div>
+<div
+    class="quiz-result"
+    id="quizResult"
+    style="display:none"
+></div>
 
-    </div>
+</div>
 
 </div>
 
@@ -1680,7 +1714,7 @@ import {
 import {
     getStorage,
     ref as storageRef,
-    uploadBytes,
+    uploadBytesResumable,
     getDownloadURL,
     deleteObject
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
@@ -1743,16 +1777,6 @@ let currentUser = null;
 
 let currentCategory = "materi";
 
-/*
-    currentFolderId:
-
-    null
-    = halaman utama kategori
-
-    "abc123"
-    = sedang berada di dalam folder abc123
-*/
-
 let currentFolderId = null;
 
 let editingFolderId = null;
@@ -1761,6 +1785,10 @@ let editingNoteId = null;
 
 let runningQuiz = null;
 
+
+/* =========================================================
+   DATA STATE
+========================================================= */
 
 const state = {
 
@@ -1844,6 +1872,46 @@ const backBtn =
 
 
 /* =========================================================
+   UPLOAD PROGRESS DOM
+========================================================= */
+
+const uploadProgressBox =
+    document.getElementById(
+        "uploadProgressBox"
+    );
+
+const uploadProgressName =
+    document.getElementById(
+        "uploadProgressName"
+    );
+
+const uploadProgressPercent =
+    document.getElementById(
+        "uploadProgressPercent"
+    );
+
+const uploadProgressBar =
+    document.getElementById(
+        "uploadProgressBar"
+    );
+
+const uploadProgressStatus =
+    document.getElementById(
+        "uploadProgressStatus"
+    );
+
+const uploadSubmitBtn =
+    document.getElementById(
+        "uploadSubmitBtn"
+    );
+
+const closeUploadModalBtn =
+    document.getElementById(
+        "closeUploadModalBtn"
+    );
+
+
+/* =========================================================
    HELPERS
 ========================================================= */
 
@@ -1859,10 +1927,15 @@ function escapeHTML(value){
 }
 
 
-function showToast(message,type="success"){
+function showToast(
+    message,
+    type="success"
+){
 
     const toast =
-        document.getElementById("toast");
+        document.getElementById(
+            "toast"
+        );
 
     toast.textContent =
         message;
@@ -1908,7 +1981,10 @@ function closeModal(id){
 }
 
 
-function updateCloudStatus(type,text){
+function updateCloudStatus(
+    type,
+    text
+){
 
     const dot =
         document.getElementById(
@@ -2000,11 +2076,141 @@ function firebaseError(error){
     )
         return "Upload dibatalkan.";
 
+    if(
+        code.includes(
+            "storage/quota-exceeded"
+        )
+    )
+        return "Kuota Firebase Storage terlampaui.";
+
+    if(
+        code.includes(
+            "storage/retry-limit-exceeded"
+        )
+    )
+        return "Upload gagal setelah beberapa percobaan. Periksa koneksi internet.";
+
+    if(
+        code.includes(
+            "storage/invalid-checksum"
+        )
+    )
+        return "File gagal diverifikasi. Coba upload ulang.";
+
     return (
         error.message ||
         code ||
         "Terjadi kesalahan."
     );
+
+}
+
+
+/* =========================================================
+   UPLOAD PROGRESS UI
+========================================================= */
+
+function resetUploadProgress(){
+
+    uploadProgressBox.classList.remove(
+        "show",
+        "success",
+        "error"
+    );
+
+    uploadProgressName.textContent =
+        "Menunggu file...";
+
+    uploadProgressPercent.textContent =
+        "0%";
+
+    uploadProgressBar.style.width =
+        "0%";
+
+    uploadProgressStatus.textContent =
+        "Menunggu upload...";
+
+}
+
+
+function showUploadProgress(
+    fileName
+){
+
+    uploadProgressBox.classList.add(
+        "show"
+    );
+
+    uploadProgressBox.classList.remove(
+        "success",
+        "error"
+    );
+
+    uploadProgressName.textContent =
+        fileName;
+
+    uploadProgressPercent.textContent =
+        "0%";
+
+    uploadProgressBar.style.width =
+        "0%";
+
+    uploadProgressStatus.textContent =
+        "Mempersiapkan upload...";
+
+}
+
+
+function setUploadProgress(
+    percent,
+    status
+){
+
+    const safePercent =
+        Math.min(
+            100,
+            Math.max(
+                0,
+                Math.round(percent)
+            )
+        );
+
+    uploadProgressPercent.textContent =
+        `${safePercent}%`;
+
+    uploadProgressBar.style.width =
+        `${safePercent}%`;
+
+    uploadProgressStatus.textContent =
+        status;
+
+}
+
+
+function setUploadSuccess(){
+
+    uploadProgressBox.classList.add(
+        "success"
+    );
+
+    setUploadProgress(
+        100,
+        "Upload file selesai. Menyimpan data..."
+    );
+
+}
+
+
+function setUploadError(
+    message
+){
+
+    uploadProgressBox.classList.add(
+        "error"
+    );
+
+    uploadProgressStatus.textContent =
+        message;
 
 }
 
@@ -2033,7 +2239,9 @@ function basePath(){
    DATABASE READ
 ========================================================= */
 
-async function cloudGet(collection){
+async function cloudGet(
+    collection
+){
 
     const path =
         `${basePath()}/${collection}`;
@@ -2053,17 +2261,21 @@ async function cloudGet(collection){
         typeof value !== "object" ||
         value === null
     ){
+
         return [];
+
     }
 
     return Object.entries(value)
-        .map(([id,data])=>({
+        .map(
+            ([id,data])=>({
 
-            id,
+                id,
 
-            ...(data || {})
+                ...(data || {})
 
-        }));
+            })
+        );
 
 }
 
@@ -2148,7 +2360,9 @@ function getFolder(id){
    GET CHILD FOLDERS
 ========================================================= */
 
-function getChildFolders(parentId){
+function getChildFolders(
+    parentId
+){
 
     return state.folders.filter(
         folder => {
@@ -2219,7 +2433,9 @@ function getDescendantFolderIds(
    FOLDER PATH
 ========================================================= */
 
-function getFolderPath(folderId){
+function getFolderPath(
+    folderId
+){
 
     const path = [];
 
@@ -2230,12 +2446,17 @@ function getFolderPath(folderId){
 
     while(current){
 
-        if(safety[current.id])
+        if(
+            safety[current.id]
+        )
             break;
 
-        safety[current.id] = true;
+        safety[current.id] =
+            true;
 
-        path.unshift(current);
+        path.unshift(
+            current
+        );
 
         current =
             getFolder(
@@ -2253,19 +2474,26 @@ function getFolderPath(folderId){
    FOLDER FULL NAME
 ========================================================= */
 
-function getFolderFullName(folderId){
+function getFolderFullName(
+    folderId
+){
 
     if(!folderId)
         return "Tanpa kelompok";
 
     const path =
-        getFolderPath(folderId);
+        getFolderPath(
+            folderId
+        );
 
     if(!path.length)
         return "Tanpa kelompok";
 
     return path
-        .map(folder=>folder.name)
+        .map(
+            folder =>
+                folder.name
+        )
         .join(" / ");
 
 }
@@ -2313,11 +2541,6 @@ async function refresh(){
         state.quizzes =
             results[3];
 
-
-        /*
-            Pastikan currentFolderId
-            masih valid.
-        */
 
         if(
             currentFolderId &&
@@ -2409,21 +2632,20 @@ const categoryInfo = {
 };
 
 
-function setCategory(category){
+function setCategory(
+    category
+){
 
     currentCategory =
         category;
-
-    /*
-        Saat pindah kategori,
-        kembali ke root.
-    */
 
     currentFolderId =
         null;
 
     document
-        .querySelectorAll(".nav-btn")
+        .querySelectorAll(
+            ".nav-btn"
+        )
         .forEach(btn=>{
 
             btn.classList.toggle(
@@ -2466,7 +2688,9 @@ function setCategory(category){
    OPEN FOLDER
 ========================================================= */
 
-function openFolder(folderId){
+function openFolder(
+    folderId
+){
 
     const folder =
         getFolder(folderId);
@@ -2483,7 +2707,8 @@ function openFolder(folderId){
     currentFolderId =
         folderId;
 
-    searchInput.value = "";
+    searchInput.value =
+        "";
 
     updateSearchClear();
 
@@ -2493,7 +2718,7 @@ function openFolder(folderId){
 
 
 /* =========================================================
-   GO TO ROOT
+   ROOT
 ========================================================= */
 
 function goToRoot(){
@@ -2513,7 +2738,9 @@ function goToRoot(){
 function renderBreadcrumb(){
 
     const info =
-        categoryInfo[currentCategory];
+        categoryInfo[
+            currentCategory
+        ];
 
     const path =
         getFolderPath(
@@ -2524,10 +2751,16 @@ function renderBreadcrumb(){
     let html = `
 
         <button
-            class="breadcrumb-item ${!currentFolderId ? "current" : ""}"
+            class="breadcrumb-item ${
+                !currentFolderId
+                    ? "current"
+                    : ""
+            }"
             data-breadcrumb-root="true"
         >
-            📚 ${escapeHTML(info.title)}
+            📚 ${escapeHTML(
+                info.title
+            )}
         </button>
 
     `;
@@ -2548,11 +2781,27 @@ function renderBreadcrumb(){
                 </span>
 
                 <button
-                    class="breadcrumb-item ${isCurrent ? "current" : ""}"
-                    data-breadcrumb-id="${escapeHTML(folder.id)}"
-                    ${isCurrent ? "disabled" : ""}
+                    class="breadcrumb-item ${
+                        isCurrent
+                            ? "current"
+                            : ""
+                    }"
+                    data-breadcrumb-id="${
+                        escapeHTML(
+                            folder.id
+                        )
+                    }"
+                    ${
+                        isCurrent
+                            ? "disabled"
+                            : ""
+                    }
                 >
-                    📁 ${escapeHTML(folder.name)}
+                    📁 ${
+                        escapeHTML(
+                            folder.name
+                        )
+                    }
                 </button>
 
             `;
@@ -2664,7 +2913,7 @@ function renderFolderInfo(){
 
 
 /* =========================================================
-   CREATE FOLDER SELECT OPTIONS
+   FOLDER OPTIONS
 ========================================================= */
 
 function getFolderOptionsHTML(
@@ -2690,10 +2939,6 @@ function getFolderOptionsHTML(
     }
 
 
-    /*
-        Buat tree folder untuk select.
-    */
-
     const options = [];
 
 
@@ -2703,7 +2948,7 @@ function getFolderOptionsHTML(
     ){
 
         categoryFolders
-            .filter(folder => {
+            .filter(folder=>{
 
                 const p =
                     folder.parentId ||
@@ -2718,7 +2963,9 @@ function getFolderOptionsHTML(
             .forEach(folder=>{
 
                 const prefix =
-                    "　".repeat(level);
+                    "　".repeat(
+                        level
+                    );
 
                 const selected =
                     folder.id ===
@@ -2729,11 +2976,19 @@ function getFolderOptionsHTML(
                 options.push(`
 
                     <option
-                        value="${escapeHTML(folder.id)}"
+                        value="${
+                            escapeHTML(
+                                folder.id
+                            )
+                        }"
                         ${selected}
                     >
                         ${prefix}📁
-                        ${escapeHTML(folder.name)}
+                        ${
+                            escapeHTML(
+                                folder.name
+                            )
+                        }
                     </option>
 
                 `);
@@ -2798,24 +3053,16 @@ function populateFolderSelects(
             selectedNoteId
         );
 
-
     fileFolder.innerHTML =
         getFolderOptionsHTML(
             selectedFileId
         );
-
 
     quizFolder.innerHTML =
         getFolderOptionsHTML(
             selectedQuizId
         );
 
-
-    /*
-        Jika sedang berada dalam folder,
-        otomatis pilih folder tersebut
-        ketika membuat data baru.
-    */
 
     if(
         currentFolderId &&
@@ -2869,21 +3116,6 @@ function render(){
             .toLowerCase();
 
 
-    /*
-        =====================================================
-        SEARCH MODE
-        =====================================================
-
-        Jika user mencari sesuatu,
-        pencarian dilakukan ke seluruh
-        kategori.
-
-        Jadi meskipun sedang berada
-        di folder tertentu, hasil pencarian
-        tetap bisa menemukan file/kelompok
-        di dalam kategori tersebut.
-    */
-
     if(search){
 
         renderSearchResults(
@@ -2897,18 +3129,8 @@ function render(){
     }
 
 
-    /*
-        =====================================================
-        NORMAL FOLDER VIEW
-        =====================================================
-    */
-
     const cards = [];
 
-
-    /*
-        FOLDER / SUBFOLDER
-    */
 
     const folders =
         getChildFolders(
@@ -2916,102 +3138,125 @@ function render(){
         );
 
 
-    folders.forEach(folder=>{
+    folders.forEach(
+        folder=>{
 
-        const childCount =
-            state.folders.filter(
-                child =>
-                    (
-                        child.parentId ||
-                        null
-                    ) ===
-                    folder.id
-            ).length;
-
-
-        const fileCount =
-            state.files.filter(
-                file =>
-                    file.folderId ===
-                    folder.id
-            ).length;
+            const childCount =
+                state.folders.filter(
+                    child =>
+                        (
+                            child.parentId ||
+                            null
+                        ) ===
+                        folder.id
+                ).length;
 
 
-        const noteCount =
-            state.notes.filter(
-                note =>
-                    note.folderId ===
-                    folder.id
-            ).length;
+            const fileCount =
+                state.files.filter(
+                    file =>
+                        file.folderId ===
+                        folder.id
+                ).length;
 
 
-        const quizCount =
-            state.quizzes.filter(
-                quiz =>
-                    quiz.folderId ===
-                    folder.id
-            ).length;
+            const noteCount =
+                state.notes.filter(
+                    note =>
+                        note.folderId ===
+                        folder.id
+                ).length;
 
 
-        cards.push(`
+            const quizCount =
+                state.quizzes.filter(
+                    quiz =>
+                        quiz.folderId ===
+                        folder.id
+                ).length;
 
-            <div
-                class="card folder-card"
-                data-folder="${escapeHTML(folder.id)}"
-            >
 
-                <div class="card-icon">
-                    📁
+            cards.push(`
+
+                <div
+                    class="card folder-card"
+                    data-folder="${
+                        escapeHTML(
+                            folder.id
+                        )
+                    }"
+                >
+
+                    <div class="card-icon">
+                        📁
+                    </div>
+
+                    <div class="card-title">
+                        ${
+                            escapeHTML(
+                                folder.name
+                            )
+                        }
+                    </div>
+
+                    <div class="card-description">
+                        ${
+                            escapeHTML(
+                                folder.description ||
+                                "Tidak ada deskripsi."
+                            )
+                        }
+                    </div>
+
+                    <div class="card-meta">
+
+                        ${childCount}
+                        subkelompok ·
+
+                        ${fileCount}
+                        file ·
+
+                        ${noteCount}
+                        catatan ·
+
+                        ${quizCount}
+                        kuis
+
+                    </div>
+
+                    <div class="card-actions">
+
+                        <button
+                            class="small-btn edit-folder"
+                            data-id="${
+                                escapeHTML(
+                                    folder.id
+                                )
+                            }"
+                        >
+                            ✏️ Edit
+                        </button>
+
+                        <button
+                            class="small-btn danger delete-folder"
+                            data-id="${
+                                escapeHTML(
+                                    folder.id
+                                )
+                            }"
+                        >
+                            🗑️ Hapus
+                        </button>
+
+                    </div>
+
                 </div>
 
-                <div class="card-title">
-                    ${escapeHTML(folder.name)}
-                </div>
+            `);
 
-                <div class="card-description">
-                    ${escapeHTML(
-                        folder.description ||
-                        "Tidak ada deskripsi."
-                    )}
-                </div>
+        }
+    );
 
-                <div class="card-meta">
-
-                    ${childCount} subkelompok ·
-                    ${fileCount} file ·
-                    ${noteCount} catatan ·
-                    ${quizCount} kuis
-
-                </div>
-
-                <div class="card-actions">
-
-                    <button
-                        class="small-btn edit-folder"
-                        data-id="${escapeHTML(folder.id)}"
-                    >
-                        ✏️ Edit
-                    </button>
-
-                    <button
-                        class="small-btn danger delete-folder"
-                        data-id="${escapeHTML(folder.id)}"
-                    >
-                        🗑️ Hapus
-                    </button>
-
-                </div>
-
-            </div>
-
-        `);
-
-    });
-
-
-    /*
-        FILES PADA FOLDER SEKARANG
-    */
 
     const files =
         state.files.filter(
@@ -3030,65 +3275,79 @@ function render(){
         );
 
 
-    files.forEach(file=>{
+    files.forEach(
+        file=>{
 
-        cards.push(`
+            cards.push(`
 
-            <div class="card">
+                <div class="card">
 
-                <div class="card-icon">
-                    📎
+                    <div class="card-icon">
+                        📎
+                    </div>
+
+                    <div class="card-title">
+                        ${
+                            escapeHTML(
+                                file.name
+                            )
+                        }
+                    </div>
+
+                    <div class="card-description">
+                        ${
+                            escapeHTML(
+                                file.description ||
+                                "File"
+                            )
+                        }
+                    </div>
+
+                    <div class="card-meta">
+                        ${
+                            escapeHTML(
+                                getFolderFullName(
+                                    file.folderId
+                                )
+                            )
+                        }
+                    </div>
+
+                    <div class="card-actions">
+
+                        <a
+                            class="small-btn file-link"
+                            href="${
+                                escapeHTML(
+                                    file.url
+                                )
+                            }"
+                            target="_blank"
+                            rel="noopener"
+                        >
+                            🔗 Buka
+                        </a>
+
+                        <button
+                            class="small-btn danger delete-file"
+                            data-id="${
+                                escapeHTML(
+                                    file.id
+                                )
+                            }"
+                        >
+                            🗑️ Hapus
+                        </button>
+
+                    </div>
+
                 </div>
 
-                <div class="card-title">
-                    ${escapeHTML(file.name)}
-                </div>
+            `);
 
-                <div class="card-description">
-                    ${escapeHTML(
-                        file.description ||
-                        "File"
-                    )}
-                </div>
+        }
+    );
 
-                <div class="card-meta">
-                    ${escapeHTML(
-                        getFolderFullName(
-                            file.folderId
-                        )
-                    )}
-                </div>
-
-                <div class="card-actions">
-
-                    <a
-                        class="small-btn file-link"
-                        href="${escapeHTML(file.url)}"
-                        target="_blank"
-                        rel="noopener"
-                    >
-                        🔗 Buka
-                    </a>
-
-                    <button
-                        class="small-btn danger delete-file"
-                        data-id="${escapeHTML(file.id)}"
-                    >
-                        🗑️ Hapus
-                    </button>
-
-                </div>
-
-            </div>
-
-        `);
-
-    });
-
-
-    /*
-        NOTES
-    */
 
     const notes =
         state.notes.filter(
@@ -3107,60 +3366,76 @@ function render(){
         );
 
 
-    notes.forEach(note=>{
+    notes.forEach(
+        note=>{
 
-        cards.push(`
+            cards.push(`
 
-            <div class="card">
+                <div class="card">
 
-                <div class="card-icon">
-                    📝
+                    <div class="card-icon">
+                        📝
+                    </div>
+
+                    <div class="card-title">
+                        ${
+                            escapeHTML(
+                                note.title
+                            )
+                        }
+                    </div>
+
+                    <div class="note-preview">
+                        ${
+                            escapeHTML(
+                                note.content
+                            )
+                        }
+                    </div>
+
+                    <div class="card-meta">
+                        ${
+                            escapeHTML(
+                                getFolderFullName(
+                                    note.folderId
+                                )
+                            )
+                        }
+                    </div>
+
+                    <div class="card-actions">
+
+                        <button
+                            class="small-btn edit-note"
+                            data-id="${
+                                escapeHTML(
+                                    note.id
+                                )
+                            }"
+                        >
+                            ✏️ Edit
+                        </button>
+
+                        <button
+                            class="small-btn danger delete-note"
+                            data-id="${
+                                escapeHTML(
+                                    note.id
+                                )
+                            }"
+                        >
+                            🗑️ Hapus
+                        </button>
+
+                    </div>
+
                 </div>
 
-                <div class="card-title">
-                    ${escapeHTML(note.title)}
-                </div>
+            `);
 
-                <div class="note-preview">
-                    ${escapeHTML(note.content)}
-                </div>
+        }
+    );
 
-                <div class="card-meta">
-                    ${escapeHTML(
-                        getFolderFullName(
-                            note.folderId
-                        )
-                    )}
-                </div>
-
-                <div class="card-actions">
-
-                    <button
-                        class="small-btn edit-note"
-                        data-id="${escapeHTML(note.id)}"
-                    >
-                        ✏️ Edit
-                    </button>
-
-                    <button
-                        class="small-btn danger delete-note"
-                        data-id="${escapeHTML(note.id)}"
-                    >
-                        🗑️ Hapus
-                    </button>
-
-                </div>
-
-            </div>
-
-        `);
-
-    });
-
-
-    /*
-        QUIZZES
-    */
 
     const quizzes =
         state.quizzes.filter(
@@ -3179,57 +3454,75 @@ function render(){
         );
 
 
-    quizzes.forEach(quiz=>{
+    quizzes.forEach(
+        quiz=>{
 
-        cards.push(`
+            cards.push(`
 
-            <div class="card">
+                <div class="card">
 
-                <div class="card-icon">
-                    ❓
+                    <div class="card-icon">
+                        ❓
+                    </div>
+
+                    <div class="card-title">
+                        ${
+                            escapeHTML(
+                                quiz.title
+                            )
+                        }
+                    </div>
+
+                    <div class="card-description">
+                        ${
+                            escapeHTML(
+                                quiz.question
+                            )
+                        }
+                    </div>
+
+                    <div class="card-meta">
+                        ${
+                            escapeHTML(
+                                getFolderFullName(
+                                    quiz.folderId
+                                )
+                            )
+                        }
+                    </div>
+
+                    <div class="card-actions">
+
+                        <button
+                            class="small-btn run-quiz"
+                            data-id="${
+                                escapeHTML(
+                                    quiz.id
+                                )
+                            }"
+                        >
+                            ▶ Kerjakan
+                        </button>
+
+                        <button
+                            class="small-btn danger delete-quiz"
+                            data-id="${
+                                escapeHTML(
+                                    quiz.id
+                                )
+                            }"
+                        >
+                            🗑️ Hapus
+                        </button>
+
+                    </div>
+
                 </div>
 
-                <div class="card-title">
-                    ${escapeHTML(quiz.title)}
-                </div>
+            `);
 
-                <div class="card-description">
-                    ${escapeHTML(
-                        quiz.question
-                    )}
-                </div>
-
-                <div class="card-meta">
-                    ${escapeHTML(
-                        getFolderFullName(
-                            quiz.folderId
-                        )
-                    )}
-                </div>
-
-                <div class="card-actions">
-
-                    <button
-                        class="small-btn run-quiz"
-                        data-id="${escapeHTML(quiz.id)}"
-                    >
-                        ▶ Kerjakan
-                    </button>
-
-                    <button
-                        class="small-btn danger delete-quiz"
-                        data-id="${escapeHTML(quiz.id)}"
-                    >
-                        🗑️ Hapus
-                    </button>
-
-                </div>
-
-            </div>
-
-        `);
-
-    });
+        }
+    );
 
 
     if(cards.length === 0){
@@ -3287,14 +3580,12 @@ function render(){
    SEARCH RESULTS
 ========================================================= */
 
-function renderSearchResults(search){
+function renderSearchResults(
+    search
+){
 
     const cards = [];
 
-
-    /*
-        FOLDER
-    */
 
     state.folders
         .filter(
@@ -3302,106 +3593,125 @@ function renderSearchResults(search){
                 folder.category ===
                 currentCategory
         )
-        .filter(folder => {
+        .filter(
+            folder=>{
 
-            const fullName =
-                getFolderFullName(
-                    folder.id
-                );
+                const fullName =
+                    getFolderFullName(
+                        folder.id
+                    );
 
-            return (
+                return (
 
-                String(
-                    folder.name || ""
-                )
-                .toLowerCase()
-                .includes(search)
-
-                ||
-
-                String(
-                    folder.description || ""
-                )
-                .toLowerCase()
-                .includes(search)
-
-                ||
-
-                fullName
+                    String(
+                        folder.name || ""
+                    )
                     .toLowerCase()
                     .includes(search)
 
-            );
+                    ||
 
-        })
-        .forEach(folder=>{
+                    String(
+                        folder.description || ""
+                    )
+                    .toLowerCase()
+                    .includes(search)
 
-            const childCount =
-                state.folders.filter(
-                    child =>
-                        (
-                            child.parentId ||
-                            null
-                        ) === folder.id
-                ).length;
+                    ||
+
+                    fullName
+                        .toLowerCase()
+                        .includes(search)
+
+                );
+
+            }
+        )
+        .forEach(
+            folder=>{
+
+                const childCount =
+                    state.folders.filter(
+                        child =>
+                            (
+                                child.parentId ||
+                                null
+                            ) ===
+                            folder.id
+                    ).length;
 
 
-            cards.push(`
+                cards.push(`
 
-                <div
-                    class="card folder-card"
-                    data-folder="${escapeHTML(folder.id)}"
-                >
-
-                    <div class="card-icon">
-                        📁
-                    </div>
-
-                    <div class="card-title">
-                        ${escapeHTML(folder.name)}
-                    </div>
-
-                    <div class="card-description">
-                        ${escapeHTML(
-                            folder.description ||
-                            "Kelompok"
-                        )}
-                    </div>
-
-                    <div class="card-meta">
-                        📍 ${escapeHTML(
-                            getFolderFullName(
-                                folder.parentId
+                    <div
+                        class="card folder-card"
+                        data-folder="${
+                            escapeHTML(
+                                folder.id
                             )
-                        )}
-                        ${
-                            childCount
-                                ? ` · ${childCount} subkelompok`
-                                : ""
-                        }
+                        }"
+                    >
+
+                        <div class="card-icon">
+                            📁
+                        </div>
+
+                        <div class="card-title">
+                            ${
+                                escapeHTML(
+                                    folder.name
+                                )
+                            }
+                        </div>
+
+                        <div class="card-description">
+                            ${
+                                escapeHTML(
+                                    folder.description ||
+                                    "Kelompok"
+                                )
+                            }
+                        </div>
+
+                        <div class="card-meta">
+                            📍 ${
+                                escapeHTML(
+                                    getFolderFullName(
+                                        folder.parentId
+                                    )
+                                )
+                            }
+
+                            ${
+                                childCount
+                                    ? ` · ${childCount} subkelompok`
+                                    : ""
+                            }
+
+                        </div>
+
+                        <div class="card-actions">
+
+                            <button
+                                class="small-btn edit-folder"
+                                data-id="${
+                                    escapeHTML(
+                                        folder.id
+                                    )
+                                }"
+                            >
+                                ✏️ Edit
+                            </button>
+
+                        </div>
+
                     </div>
 
-                    <div class="card-actions">
+                `);
 
-                        <button
-                            class="small-btn edit-folder"
-                            data-id="${escapeHTML(folder.id)}"
-                        >
-                            ✏️ Edit
-                        </button>
+            }
+        );
 
-                    </div>
-
-                </div>
-
-            `);
-
-        });
-
-
-    /*
-        FILE
-    */
 
     state.files
         .filter(
@@ -3409,87 +3719,99 @@ function renderSearchResults(search){
                 file.category ===
                 currentCategory
         )
-        .filter(file => {
+        .filter(
+            file=>{
 
-            return (
+                return (
 
-                String(
-                    file.name || ""
-                )
-                .toLowerCase()
-                .includes(search)
+                    String(
+                        file.name || ""
+                    )
+                    .toLowerCase()
+                    .includes(search)
 
-                ||
+                    ||
 
-                String(
-                    file.description || ""
-                )
-                .toLowerCase()
-                .includes(search)
+                    String(
+                        file.description || ""
+                    )
+                    .toLowerCase()
+                    .includes(search)
 
-                ||
+                    ||
 
-                getFolderFullName(
-                    file.folderId
-                )
-                .toLowerCase()
-                .includes(search)
+                    getFolderFullName(
+                        file.folderId
+                    )
+                    .toLowerCase()
+                    .includes(search)
 
-            );
+                );
 
-        })
-        .forEach(file=>{
+            }
+        )
+        .forEach(
+            file=>{
 
-            cards.push(`
+                cards.push(`
 
-                <div class="card">
+                    <div class="card">
 
-                    <div class="card-icon">
-                        📎
+                        <div class="card-icon">
+                            📎
+                        </div>
+
+                        <div class="card-title">
+                            ${
+                                escapeHTML(
+                                    file.name
+                                )
+                            }
+                        </div>
+
+                        <div class="card-description">
+                            ${
+                                escapeHTML(
+                                    file.description ||
+                                    "File"
+                                )
+                            }
+                        </div>
+
+                        <div class="card-meta">
+                            📍 ${
+                                escapeHTML(
+                                    getFolderFullName(
+                                        file.folderId
+                                    )
+                                )
+                            }
+                        </div>
+
+                        <div class="card-actions">
+
+                            <a
+                                class="small-btn file-link"
+                                href="${
+                                    escapeHTML(
+                                        file.url
+                                    )
+                                }"
+                                target="_blank"
+                                rel="noopener"
+                            >
+                                🔗 Buka
+                            </a>
+
+                        </div>
+
                     </div>
 
-                    <div class="card-title">
-                        ${escapeHTML(file.name)}
-                    </div>
+                `);
 
-                    <div class="card-description">
-                        ${escapeHTML(
-                            file.description ||
-                            "File"
-                        )}
-                    </div>
+            }
+        );
 
-                    <div class="card-meta">
-                        📍 ${escapeHTML(
-                            getFolderFullName(
-                                file.folderId
-                            )
-                        )}
-                    </div>
-
-                    <div class="card-actions">
-
-                        <a
-                            class="small-btn file-link"
-                            href="${escapeHTML(file.url)}"
-                            target="_blank"
-                            rel="noopener"
-                        >
-                            🔗 Buka
-                        </a>
-
-                    </div>
-
-                </div>
-
-            `);
-
-        });
-
-
-    /*
-        NOTE
-    */
 
     state.notes
         .filter(
@@ -3497,82 +3819,96 @@ function renderSearchResults(search){
                 note.category ===
                 currentCategory
         )
-        .filter(note => {
+        .filter(
+            note=>{
 
-            return (
+                return (
 
-                String(
-                    note.title || ""
-                )
-                .toLowerCase()
-                .includes(search)
+                    String(
+                        note.title || ""
+                    )
+                    .toLowerCase()
+                    .includes(search)
 
-                ||
+                    ||
 
-                String(
-                    note.content || ""
-                )
-                .toLowerCase()
-                .includes(search)
+                    String(
+                        note.content || ""
+                    )
+                    .toLowerCase()
+                    .includes(search)
 
-                ||
+                    ||
 
-                getFolderFullName(
-                    note.folderId
-                )
-                .toLowerCase()
-                .includes(search)
+                    getFolderFullName(
+                        note.folderId
+                    )
+                    .toLowerCase()
+                    .includes(search)
 
-            );
+                );
 
-        })
-        .forEach(note=>{
+            }
+        )
+        .forEach(
+            note=>{
 
-            cards.push(`
+                cards.push(`
 
-                <div class="card">
+                    <div class="card">
 
-                    <div class="card-icon">
-                        📝
+                        <div class="card-icon">
+                            📝
+                        </div>
+
+                        <div class="card-title">
+                            ${
+                                escapeHTML(
+                                    note.title
+                                )
+                            }
+                        </div>
+
+                        <div class="note-preview">
+                            ${
+                                escapeHTML(
+                                    note.content
+                                )
+                            }
+                        </div>
+
+                        <div class="card-meta">
+                            📍 ${
+                                escapeHTML(
+                                    getFolderFullName(
+                                        note.folderId
+                                    )
+                                )
+                            }
+                        </div>
+
+                        <div class="card-actions">
+
+                            <button
+                                class="small-btn edit-note"
+                                data-id="${
+                                    escapeHTML(
+                                        note.id
+                                    )
+                                }"
+                            >
+                                ✏️ Edit
+                            </button>
+
+                        </div>
+
                     </div>
 
-                    <div class="card-title">
-                        ${escapeHTML(note.title)}
-                    </div>
+                `);
 
-                    <div class="note-preview">
-                        ${escapeHTML(note.content)}
-                    </div>
+            }
+        );
 
-                    <div class="card-meta">
-                        📍 ${escapeHTML(
-                            getFolderFullName(
-                                note.folderId
-                            )
-                        )}
-                    </div>
-
-                    <div class="card-actions">
-
-                        <button
-                            class="small-btn edit-note"
-                            data-id="${escapeHTML(note.id)}"
-                        >
-                            ✏️ Edit
-                        </button>
-
-                    </div>
-
-                </div>
-
-            `);
-
-        });
-
-
-    /*
-        QUIZ
-    */
 
     state.quizzes
         .filter(
@@ -3580,79 +3916,95 @@ function renderSearchResults(search){
                 quiz.category ===
                 currentCategory
         )
-        .filter(quiz => {
+        .filter(
+            quiz=>{
 
-            return (
+                return (
 
-                String(
-                    quiz.title || ""
-                )
-                .toLowerCase()
-                .includes(search)
+                    String(
+                        quiz.title || ""
+                    )
+                    .toLowerCase()
+                    .includes(search)
 
-                ||
+                    ||
 
-                String(
-                    quiz.question || ""
-                )
-                .toLowerCase()
-                .includes(search)
+                    String(
+                        quiz.question || ""
+                    )
+                    .toLowerCase()
+                    .includes(search)
 
-                ||
+                    ||
 
-                getFolderFullName(
-                    quiz.folderId
-                )
-                .toLowerCase()
-                .includes(search)
+                    getFolderFullName(
+                        quiz.folderId
+                    )
+                    .toLowerCase()
+                    .includes(search)
 
-            );
+                );
 
-        })
-        .forEach(quiz=>{
+            }
+        )
+        .forEach(
+            quiz=>{
 
-            cards.push(`
+                cards.push(`
 
-                <div class="card">
+                    <div class="card">
 
-                    <div class="card-icon">
-                        ❓
+                        <div class="card-icon">
+                            ❓
+                        </div>
+
+                        <div class="card-title">
+                            ${
+                                escapeHTML(
+                                    quiz.title
+                                )
+                            }
+                        </div>
+
+                        <div class="card-description">
+                            ${
+                                escapeHTML(
+                                    quiz.question
+                                )
+                            }
+                        </div>
+
+                        <div class="card-meta">
+                            📍 ${
+                                escapeHTML(
+                                    getFolderFullName(
+                                        quiz.folderId
+                                    )
+                                )
+                            }
+                        </div>
+
+                        <div class="card-actions">
+
+                            <button
+                                class="small-btn run-quiz"
+                                data-id="${
+                                    escapeHTML(
+                                        quiz.id
+                                    )
+                                }"
+                            >
+                                ▶ Kerjakan
+                            </button>
+
+                        </div>
+
                     </div>
 
-                    <div class="card-title">
-                        ${escapeHTML(quiz.title)}
-                    </div>
+                `);
 
-                    <div class="card-description">
-                        ${escapeHTML(
-                            quiz.question
-                        )}
-                    </div>
-
-                    <div class="card-meta">
-                        📍 ${escapeHTML(
-                            getFolderFullName(
-                                quiz.folderId
-                            )
-                        )}
-                    </div>
-
-                    <div class="card-actions">
-
-                        <button
-                            class="small-btn run-quiz"
-                            data-id="${escapeHTML(quiz.id)}"
-                        >
-                            ▶ Kerjakan
-                        </button>
-
-                    </div>
-
-                </div>
-
-            `);
-
-        });
+            }
+        );
 
 
     if(cards.length === 0){
@@ -3735,10 +4087,6 @@ function updateStats(){
 }
 
 
-/* =========================================================
-   UPDATE SEARCH CLEAR
-========================================================= */
-
 function updateSearchClear(){
 
     searchClear.style.display =
@@ -3754,7 +4102,9 @@ function updateSearchClear(){
 ========================================================= */
 
 document
-    .getElementById("addFolderBtn")
+    .getElementById(
+        "addFolderBtn"
+    )
     .addEventListener(
         "click",
         ()=>{
@@ -3831,7 +4181,9 @@ document
 ========================================================= */
 
 document
-    .getElementById("folderForm")
+    .getElementById(
+        "folderForm"
+    )
     .addEventListener(
         "submit",
         async event=>{
@@ -3878,11 +4230,6 @@ document
 
                 if(editingFolderId){
 
-                    /*
-                        Saat edit,
-                        parentId tetap dipertahankan.
-                    */
-
                     const existing =
                         getFolder(
                             editingFolderId
@@ -3913,16 +4260,6 @@ document
                     );
 
                 }else{
-
-                    /*
-                        Ini bagian penting.
-
-                        Jika berada di root:
-                        parentId = null
-
-                        Jika berada di folder:
-                        parentId = currentFolderId
-                    */
 
                     await cloudAdd(
                         "folders",
@@ -3979,7 +4316,7 @@ document
 
 
 /* =========================================================
-   DELETE FOLDER + DESCENDANTS
+   DELETE FOLDER TREE
 ========================================================= */
 
 async function deleteFolderTree(
@@ -4000,12 +4337,6 @@ async function deleteFolderTree(
 
     ];
 
-
-    /*
-        Hapus file Storage
-        yang berada di seluruh
-        folder tree.
-    */
 
     const affectedFiles =
         state.files.filter(
@@ -4045,10 +4376,6 @@ async function deleteFolderTree(
     }
 
 
-    /*
-        Hapus database files.
-    */
-
     for(
         const file of affectedFiles
     ){
@@ -4060,10 +4387,6 @@ async function deleteFolderTree(
 
     }
 
-
-    /*
-        Hapus notes.
-    */
 
     const affectedNotes =
         state.notes.filter(
@@ -4086,10 +4409,6 @@ async function deleteFolderTree(
     }
 
 
-    /*
-        Hapus quizzes.
-    */
-
     const affectedQuizzes =
         state.quizzes.filter(
             quiz =>
@@ -4110,10 +4429,6 @@ async function deleteFolderTree(
 
     }
 
-
-    /*
-        Hapus seluruh folder.
-    */
 
     for(
         const id of allFolderIds
@@ -4137,10 +4452,6 @@ contentGrid.addEventListener(
     "click",
     async event=>{
 
-        /*
-            OPEN FOLDER
-        */
-
         const folderCard =
             event.target.closest(
                 ".folder-card"
@@ -4162,10 +4473,6 @@ contentGrid.addEventListener(
 
         }
 
-
-        /*
-            EDIT FOLDER
-        */
 
         const editFolder =
             event.target.closest(
@@ -4220,12 +4527,10 @@ contentGrid.addEventListener(
                     "parentFolderInfo"
                 );
 
-
             const parentName =
                 document.getElementById(
                     "parentFolderName"
                 );
-
 
             const parent =
                 getFolder(
@@ -4260,10 +4565,6 @@ contentGrid.addEventListener(
 
         }
 
-
-        /*
-            DELETE FOLDER
-        */
 
         const deleteFolder =
             event.target.closest(
@@ -4352,10 +4653,6 @@ contentGrid.addEventListener(
         }
 
 
-        /*
-            EDIT NOTE
-        */
-
         const editNote =
             event.target.closest(
                 ".edit-note"
@@ -4422,10 +4719,6 @@ contentGrid.addEventListener(
         }
 
 
-        /*
-            DELETE NOTE
-        */
-
         const deleteNote =
             event.target.closest(
                 ".delete-note"
@@ -4474,10 +4767,6 @@ contentGrid.addEventListener(
 
         }
 
-
-        /*
-            DELETE FILE
-        */
 
         const deleteFile =
             event.target.closest(
@@ -4561,10 +4850,6 @@ contentGrid.addEventListener(
         }
 
 
-        /*
-            DELETE QUIZ
-        */
-
         const deleteQuiz =
             event.target.closest(
                 ".delete-quiz"
@@ -4613,10 +4898,6 @@ contentGrid.addEventListener(
 
         }
 
-
-        /*
-            RUN QUIZ
-        */
 
         const runQuiz =
             event.target.closest(
@@ -4667,11 +4948,13 @@ backBtn.addEventListener(
 
 
 /* =========================================================
-   NOTE
+   ADD NOTE
 ========================================================= */
 
 document
-    .getElementById("addNoteBtn")
+    .getElementById(
+        "addNoteBtn"
+    )
     .addEventListener(
         "click",
         ()=>{
@@ -4702,8 +4985,14 @@ document
     );
 
 
+/* =========================================================
+   NOTE FORM
+========================================================= */
+
 document
-    .getElementById("noteForm")
+    .getElementById(
+        "noteForm"
+    )
     .addEventListener(
         "submit",
         async event=>{
@@ -4842,11 +5131,13 @@ document
 
 
 /* =========================================================
-   FILE UPLOAD
+   OPEN UPLOAD MODAL
 ========================================================= */
 
 document
-    .getElementById("uploadBtn")
+    .getElementById(
+        "uploadBtn"
+    )
     .addEventListener(
         "click",
         ()=>{
@@ -4856,6 +5147,9 @@ document
                     "fileForm"
                 )
                 .reset();
+
+
+            resetUploadProgress();
 
 
             populateFolderSelects();
@@ -4869,8 +5163,14 @@ document
     );
 
 
+/* =========================================================
+   FILE UPLOAD WITH REAL PROGRESS
+========================================================= */
+
 document
-    .getElementById("fileForm")
+    .getElementById(
+        "fileForm"
+    )
     .addEventListener(
         "submit",
         async event=>{
@@ -4900,6 +5200,18 @@ document
             }
 
 
+            if(!currentUser){
+
+                showToast(
+                    "User belum login.",
+                    "error"
+                );
+
+                return;
+
+            }
+
+
             const folderId =
                 document.getElementById(
                     "fileFolder"
@@ -4920,18 +5232,23 @@ document
                 .trim();
 
 
-            const uploadButton =
-                document.getElementById(
-                    "uploadSubmitBtn"
-                );
+            /*
+                KUNCI TOMBOL SELAMA UPLOAD
+            */
 
-
-            uploadButton.disabled =
+            uploadSubmitBtn.disabled =
                 true;
 
+            closeUploadModalBtn.disabled =
+                true;
 
-            uploadButton.textContent =
-                "Uploading...";
+            uploadSubmitBtn.textContent =
+                "Mengupload...";
+
+
+            showUploadProgress(
+                file.name
+            );
 
 
             try{
@@ -4954,16 +5271,102 @@ document
                     );
 
 
-                await uploadBytes(
-                    fileRef,
-                    file
-                );
+                /*
+                    uploadBytesResumable
+                    memungkinkan progress
+                    upload secara real-time.
+                */
 
-
-                const url =
-                    await getDownloadURL(
-                        fileRef
+                const uploadTask =
+                    uploadBytesResumable(
+                        fileRef,
+                        file
                     );
+
+
+                const downloadURL =
+                    await new Promise(
+                        (
+                            resolve,
+                            reject
+                        )=>{
+
+                            uploadTask.on(
+
+                                "state_changed",
+
+                                snapshot=>{
+
+                                    const percent =
+                                        (
+                                            snapshot.bytesTransferred /
+                                            snapshot.totalBytes
+                                        ) * 100;
+
+
+                                    setUploadProgress(
+                                        percent,
+                                        `Mengupload... ${Math.round(percent)}%`
+                                    );
+
+                                },
+
+                                error=>{
+
+                                    reject(
+                                        error
+                                    );
+
+                                },
+
+                                async ()=>{
+
+                                    try{
+
+                                        setUploadProgress(
+                                            100,
+                                            "Upload selesai. Mengambil URL file..."
+                                        );
+
+
+                                        const url =
+                                            await getDownloadURL(
+                                                uploadTask.snapshot.ref
+                                            );
+
+
+                                        resolve(
+                                            url
+                                        );
+
+                                    }catch(error){
+
+                                        reject(
+                                            error
+                                        );
+
+                                    }
+
+                                }
+
+                            );
+
+                        }
+                    );
+
+
+                /*
+                    Setelah file masuk Storage,
+                    simpan metadata ke Realtime Database.
+                */
+
+                setUploadSuccess();
+
+
+                setUploadProgress(
+                    100,
+                    "Menyimpan informasi file ke Firebase..."
+                );
 
 
                 await cloudAdd(
@@ -4975,7 +5378,8 @@ document
 
                         description,
 
-                        url,
+                        url:
+                            downloadURL,
 
                         storagePath,
 
@@ -5001,8 +5405,28 @@ document
                 );
 
 
+                setUploadProgress(
+                    100,
+                    "Upload berhasil! File tersimpan."
+                );
+
+
                 showToast(
                     "File berhasil diupload ke Firebase."
+                );
+
+
+                /*
+                    Tunggu sedikit agar user
+                    sempat melihat status berhasil.
+                */
+
+                await new Promise(
+                    resolve =>
+                        setTimeout(
+                            resolve,
+                            500
+                        )
                 );
 
 
@@ -5021,6 +5445,12 @@ document
                 );
 
 
+                setUploadError(
+                    "Upload gagal: " +
+                    firebaseError(error)
+                );
+
+
                 showToast(
                     "Upload gagal: " +
                     firebaseError(error),
@@ -5029,10 +5459,13 @@ document
 
             }finally{
 
-                uploadButton.disabled =
+                uploadSubmitBtn.disabled =
                     false;
 
-                uploadButton.textContent =
+                closeUploadModalBtn.disabled =
+                    false;
+
+                uploadSubmitBtn.textContent =
                     "Upload";
 
             }
@@ -5046,7 +5479,9 @@ document
 ========================================================= */
 
 document
-    .getElementById("addQuizBtn")
+    .getElementById(
+        "addQuizBtn"
+    )
     .addEventListener(
         "click",
         ()=>{
@@ -5070,7 +5505,9 @@ document
 
 
 document
-    .getElementById("quizForm")
+    .getElementById(
+        "quizForm"
+    )
     .addEventListener(
         "submit",
         async event=>{
@@ -5243,34 +5680,40 @@ function openQuiz(id){
         <div class="quiz-question">
 
             <h4>
-                ${escapeHTML(
-                    quiz.question
-                )}
+                ${
+                    escapeHTML(
+                        quiz.question
+                    )
+                }
             </h4>
 
-            ${["A","B","C","D"]
-                .map(
-                    letter=>`
+            ${
+                ["A","B","C","D"]
+                    .map(
+                        letter=>`
 
-                    <label class="quiz-option">
+                            <label class="quiz-option">
 
-                        <input
-                            type="radio"
-                            name="runQuizAnswer"
-                            value="${letter}"
-                        >
+                                <input
+                                    type="radio"
+                                    name="runQuizAnswer"
+                                    value="${letter}"
+                                >
 
-                        <b>${letter}.</b>
-                        ${escapeHTML(
-                            quiz.options?.[letter] ||
-                            ""
-                        )}
+                                <b>${letter}.</b>
 
-                    </label>
+                                ${
+                                    escapeHTML(
+                                        quiz.options?.[letter] ||
+                                        ""
+                                    )
+                                }
 
-                `
-                )
-                .join("")
+                            </label>
+
+                        `
+                    )
+                    .join("")
             }
 
         </div>
@@ -5286,7 +5729,9 @@ function openQuiz(id){
 
 
 document
-    .getElementById("submitQuizBtn")
+    .getElementById(
+        "submitQuizBtn"
+    )
     .addEventListener(
         "click",
         ()=>{
@@ -5383,26 +5828,30 @@ searchClear.addEventListener(
 ========================================================= */
 
 document
-    .querySelectorAll(".nav-btn")
-    .forEach(btn=>{
+    .querySelectorAll(
+        ".nav-btn"
+    )
+    .forEach(
+        btn=>{
 
-        btn.addEventListener(
-            "click",
-            ()=>{
+            btn.addEventListener(
+                "click",
+                ()=>{
 
-                setCategory(
-                    btn.dataset.category
-                );
+                    setCategory(
+                        btn.dataset.category
+                    );
 
 
-                sidebar.classList.remove(
-                    "open"
-                );
+                    sidebar.classList.remove(
+                        "open"
+                    );
 
-            }
-        );
+                }
+            );
 
-    });
+        }
+    );
 
 
 /* =========================================================
@@ -5410,7 +5859,9 @@ document
 ========================================================= */
 
 document
-    .getElementById("mobileMenu")
+    .getElementById(
+        "mobileMenu"
+    )
     .addEventListener(
         "click",
         ()=>{
@@ -5428,46 +5879,87 @@ document
 ========================================================= */
 
 document
-    .querySelectorAll("[data-close]")
-    .forEach(button=>{
+    .querySelectorAll(
+        "[data-close]"
+    )
+    .forEach(
+        button=>{
 
-        button.addEventListener(
-            "click",
-            ()=>{
+            button.addEventListener(
+                "click",
+                ()=>{
 
-                closeModal(
-                    button.dataset.close
-                );
+                    /*
+                        Jangan tutup modal
+                        ketika upload sedang berjalan.
+                    */
 
-            }
-        );
+                    if(
+                        button.id ===
+                        "closeUploadModalBtn" &&
+                        uploadSubmitBtn.disabled
+                    ){
 
-    });
+                        return;
+
+                    }
 
 
-document
-    .querySelectorAll(".modal-overlay")
-    .forEach(overlay=>{
-
-        overlay.addEventListener(
-            "click",
-            event=>{
-
-                if(
-                    event.target ===
-                    overlay
-                ){
-
-                    overlay.classList.remove(
-                        "show"
+                    closeModal(
+                        button.dataset.close
                     );
 
                 }
+            );
 
-            }
-        );
+        }
+    );
 
-    });
+
+document
+    .querySelectorAll(
+        ".modal-overlay"
+    )
+    .forEach(
+        overlay=>{
+
+            overlay.addEventListener(
+                "click",
+                event=>{
+
+                    if(
+                        event.target ===
+                        overlay
+                    ){
+
+                        /*
+                            Upload modal tidak bisa
+                            ditutup ketika upload
+                            sedang berjalan.
+                        */
+
+                        if(
+                            overlay.id ===
+                            "fileModal" &&
+                            uploadSubmitBtn.disabled
+                        ){
+
+                            return;
+
+                        }
+
+
+                        overlay.classList.remove(
+                            "show"
+                        );
+
+                    }
+
+                }
+            );
+
+        }
+    );
 
 
 /* =========================================================
@@ -5538,7 +6030,6 @@ loginForm.addEventListener(
 
         loginBtn.disabled =
             true;
-
 
         loginBtn.textContent =
             "Login...";
