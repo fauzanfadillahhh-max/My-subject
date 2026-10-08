@@ -1,0 +1,3848 @@
+```html
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Subject — Fauzan</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    font-family:Arial,Helvetica,sans-serif;
+}
+
+body{
+    background:#0b1020;
+    color:#f5f7ff;
+    min-height:100vh;
+}
+
+button,input,select,textarea{
+    font:inherit;
+}
+
+button{
+    cursor:pointer;
+}
+
+/* ================= LOGIN ================= */
+
+#loginPage{
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:20px;
+    background:
+        radial-gradient(circle at top left,#243b75 0,#11172d 35%,#080c18 75%);
+}
+
+.login-card{
+    width:100%;
+    max-width:420px;
+    background:#11182c;
+    border:1px solid #263253;
+    border-radius:24px;
+    padding:35px;
+    box-shadow:0 20px 60px rgba(0,0,0,.45);
+}
+
+.logo{
+    width:65px;
+    height:65px;
+    border-radius:18px;
+    background:linear-gradient(135deg,#5b7cfa,#8b5cf6);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:30px;
+    margin-bottom:20px;
+}
+
+.login-card h1{
+    font-size:30px;
+    margin-bottom:8px;
+}
+
+.login-card p{
+    color:#8f9ab5;
+    margin-bottom:28px;
+}
+
+.form-group{
+    margin-bottom:17px;
+}
+
+.form-group label{
+    display:block;
+    font-size:14px;
+    color:#aab3c9;
+    margin-bottom:7px;
+}
+
+.form-group input,
+.modal input,
+.modal textarea,
+.modal select{
+    width:100%;
+    background:#0b1122;
+    border:1px solid #2a3657;
+    border-radius:12px;
+    padding:13px 14px;
+    color:white;
+    outline:none;
+}
+
+.form-group input:focus,
+.modal input:focus,
+.modal textarea:focus,
+.modal select:focus{
+    border-color:#667eea;
+}
+
+.login-btn{
+    width:100%;
+    border:none;
+    border-radius:12px;
+    padding:14px;
+    color:white;
+    font-weight:bold;
+    background:linear-gradient(135deg,#667eea,#764ba2);
+}
+
+.login-btn:disabled{
+    opacity:.6;
+}
+
+.login-error{
+    color:#ff6b81;
+    font-size:13px;
+    margin-top:13px;
+    min-height:18px;
+}
+
+/* ================= APP ================= */
+
+#appPage{
+    display:none;
+    min-height:100vh;
+}
+
+.app{
+    display:flex;
+    min-height:100vh;
+}
+
+/* SIDEBAR */
+
+.sidebar{
+    width:250px;
+    background:#0d1427;
+    border-right:1px solid #202b48;
+    padding:20px 15px;
+    position:fixed;
+    left:0;
+    top:0;
+    bottom:0;
+    overflow-y:auto;
+}
+
+.brand{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:8px 10px 25px;
+}
+
+.brand-icon{
+    width:42px;
+    height:42px;
+    border-radius:12px;
+    background:linear-gradient(135deg,#667eea,#764ba2);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:20px;
+}
+
+.brand-text h2{
+    font-size:18px;
+}
+
+.brand-text span{
+    color:#75809b;
+    font-size:12px;
+}
+
+.menu-title{
+    color:#64708e;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    padding:15px 10px 8px;
+}
+
+.nav-btn{
+    width:100%;
+    border:none;
+    background:transparent;
+    color:#aeb8ce;
+    text-align:left;
+    padding:12px;
+    border-radius:10px;
+    margin-bottom:5px;
+    display:flex;
+    align-items:center;
+    gap:11px;
+}
+
+.nav-btn:hover{
+    background:#151e37;
+    color:white;
+}
+
+.nav-btn.active{
+    background:#202b4d;
+    color:white;
+}
+
+.sidebar-bottom{
+    position:absolute;
+    left:15px;
+    right:15px;
+    bottom:20px;
+}
+
+.cloud-status{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:12px;
+    color:#8490aa;
+    padding:10px;
+    margin-bottom:10px;
+}
+
+.status-dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#888;
+}
+
+.status-dot.online{
+    background:#22c55e;
+    box-shadow:0 0 8px #22c55e;
+}
+
+.status-dot.loading{
+    background:#f59e0b;
+}
+
+.status-dot.error{
+    background:#ef4444;
+}
+
+.logout-btn{
+    width:100%;
+    border:1px solid #293451;
+    background:#131b31;
+    color:#c5ccdc;
+    padding:11px;
+    border-radius:10px;
+}
+
+/* MAIN */
+
+.main{
+    margin-left:250px;
+    width:calc(100% - 250px);
+    padding:25px;
+}
+
+.topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:20px;
+    margin-bottom:25px;
+}
+
+.page-title h1{
+    font-size:27px;
+}
+
+.page-title p{
+    color:#74809b;
+    font-size:13px;
+    margin-top:5px;
+}
+
+.top-actions{
+    display:flex;
+    gap:10px;
+}
+
+.primary-btn,
+.secondary-btn{
+    border:none;
+    border-radius:10px;
+    padding:11px 15px;
+    color:white;
+    font-weight:600;
+}
+
+.primary-btn{
+    background:linear-gradient(135deg,#667eea,#764ba2);
+}
+
+.secondary-btn{
+    background:#17213a;
+    border:1px solid #293657;
+}
+
+.primary-btn:hover,
+.secondary-btn:hover{
+    transform:translateY(-1px);
+}
+
+/* SEARCH */
+
+.search-box{
+    background:#11192d;
+    border:1px solid #222e4c;
+    border-radius:13px;
+    padding:12px 15px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:20px;
+}
+
+.search-box input{
+    flex:1;
+    background:none;
+    border:none;
+    outline:none;
+    color:white;
+}
+
+/* STATS */
+
+.stats{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:15px;
+    margin-bottom:25px;
+}
+
+.stat-card{
+    background:#11192d;
+    border:1px solid #222e4c;
+    border-radius:15px;
+    padding:18px;
+}
+
+.stat-icon{
+    font-size:22px;
+    margin-bottom:10px;
+}
+
+.stat-value{
+    font-size:25px;
+    font-weight:bold;
+}
+
+.stat-label{
+    color:#77839e;
+    font-size:12px;
+    margin-top:5px;
+}
+
+/* CONTENT */
+
+.section-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:15px;
+}
+
+.section-header h2{
+    font-size:18px;
+}
+
+.content-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+    gap:15px;
+}
+
+.card{
+    background:#11192d;
+    border:1px solid #222e4c;
+    border-radius:16px;
+    padding:18px;
+    transition:.2s;
+}
+
+.card:hover{
+    border-color:#44558a;
+    transform:translateY(-2px);
+}
+
+.folder-card{
+    cursor:pointer;
+}
+
+.card-icon{
+    font-size:31px;
+    margin-bottom:14px;
+}
+
+.card-title{
+    font-weight:bold;
+    word-break:break-word;
+}
+
+.card-description{
+    color:#77839e;
+    font-size:12px;
+    margin-top:6px;
+    line-height:1.5;
+}
+
+.card-meta{
+    color:#65718b;
+    font-size:11px;
+    margin-top:12px;
+}
+
+.card-actions{
+    display:flex;
+    gap:7px;
+    margin-top:15px;
+}
+
+.small-btn{
+    border:1px solid #293657;
+    background:#151e35;
+    color:#c9d1e4;
+    border-radius:8px;
+    padding:7px 9px;
+    font-size:12px;
+}
+
+.small-btn.danger{
+    color:#ff7789;
+}
+
+.empty{
+    grid-column:1/-1;
+    text-align:center;
+    padding:55px 20px;
+    border:1px dashed #2c3857;
+    border-radius:15px;
+    color:#66728d;
+}
+
+.note-preview{
+    white-space:pre-wrap;
+    color:#aeb8cc;
+    font-size:13px;
+    line-height:1.5;
+    max-height:110px;
+    overflow:hidden;
+}
+
+.file-link{
+    color:#87a1ff;
+    text-decoration:none;
+}
+
+.file-link:hover{
+    text-decoration:underline;
+}
+
+/* MODAL */
+
+.modal-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(3,6,15,.78);
+    z-index:100;
+    justify-content:center;
+    align-items:center;
+    padding:20px;
+}
+
+.modal-overlay.show{
+    display:flex;
+}
+
+.modal{
+    width:100%;
+    max-width:500px;
+    max-height:90vh;
+    overflow-y:auto;
+    background:#11192d;
+    border:1px solid #293657;
+    border-radius:18px;
+    padding:22px;
+}
+
+.modal h2{
+    margin-bottom:18px;
+}
+
+.modal-group{
+    margin-bottom:15px;
+}
+
+.modal-group label{
+    display:block;
+    color:#9ba6bd;
+    font-size:13px;
+    margin-bottom:7px;
+}
+
+.modal textarea{
+    min-height:130px;
+    resize:vertical;
+}
+
+.modal-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:9px;
+    margin-top:20px;
+}
+
+.close-btn{
+    border:1px solid #293657;
+    background:#151e35;
+    color:#c5cddd;
+    padding:10px 14px;
+    border-radius:9px;
+}
+
+.save-btn{
+    border:none;
+    background:#667eea;
+    color:white;
+    padding:10px 17px;
+    border-radius:9px;
+}
+
+.quiz-question{
+    background:#0b1122;
+    border:1px solid #293657;
+    border-radius:12px;
+    padding:15px;
+    margin-bottom:12px;
+}
+
+.quiz-question h4{
+    margin-bottom:12px;
+}
+
+.quiz-option{
+    display:block;
+    padding:8px;
+    color:#bbc4d7;
+}
+
+.quiz-option input{
+    width:auto;
+    margin-right:8px;
+}
+
+.quiz-result{
+    background:#0b1122;
+    padding:15px;
+    border-radius:12px;
+    text-align:center;
+    margin-top:15px;
+}
+
+/* MOBILE */
+
+.mobile-menu{
+    display:none;
+}
+
+@media(max-width:900px){
+    .sidebar{
+        transform:translateX(-100%);
+        transition:.25s;
+        z-index:90;
+    }
+
+    .sidebar.open{
+        transform:translateX(0);
+    }
+
+    .main{
+        margin-left:0;
+        width:100%;
+        padding:18px;
+    }
+
+    .mobile-menu{
+        display:block;
+        border:1px solid #293657;
+        background:#151e35;
+        color:white;
+        padding:9px 12px;
+        border-radius:9px;
+    }
+
+    .stats{
+        grid-template-columns:repeat(2,1fr);
+    }
+}
+
+@media(max-width:600px){
+    .topbar{
+        align-items:flex-start;
+    }
+
+    .top-actions{
+        flex-direction:column;
+    }
+
+    .stats{
+        grid-template-columns:1fr 1fr;
+    }
+
+    .content-grid{
+        grid-template-columns:1fr;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ================= LOGIN PAGE ================= -->
+
+<section id="loginPage">
+    <div class="login-card">
+
+        <div class="logo">📚</div>
+
+        <h1>My Subject</h1>
+        <p>Kelola materi, tugas, catatan, dan file kuliahmu.</p>
+
+        <form id="loginForm">
+
+            <div class="form-group">
+                <label>Username</label>
+                <input
+                    type="text"
+                    id="username"
+                    placeholder="Masukkan username"
+                    autocomplete="username"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Password</label>
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="Masukkan password"
+                    autocomplete="current-password"
+                    required
+                >
+            </div>
+
+            <button
+                type="submit"
+                class="login-btn"
+                id="loginBtn"
+            >
+                Login
+            </button>
+
+            <div
+                class="login-error"
+                id="loginError"
+            ></div>
+
+        </form>
+
+    </div>
+</section>
+
+
+<!-- ================= APP PAGE ================= -->
+
+<section id="appPage">
+
+<div class="app">
+
+    <!-- SIDEBAR -->
+
+    <aside class="sidebar" id="sidebar">
+
+        <div class="brand">
+            <div class="brand-icon">📚</div>
+
+            <div class="brand-text">
+                <h2>My Subject</h2>
+                <span>Study Manager</span>
+            </div>
+        </div>
+
+        <div class="menu-title">Kategori</div>
+
+        <button class="nav-btn active" data-category="materi">
+            📚
+            <span>Materi</span>
+        </button>
+
+        <button class="nav-btn" data-category="ide">
+            💡
+            <span>Ide Kreatif</span>
+        </button>
+
+        <button class="nav-btn" data-category="hikmah">
+            📝
+            <span>Pelajaran / Hikmah</span>
+        </button>
+
+        <div class="sidebar-bottom">
+
+            <div class="cloud-status">
+                <span
+                    class="status-dot"
+                    id="statusDot"
+                ></span>
+
+                <span id="cloudStatus">
+                    Menunggu Firebase...
+                </span>
+            </div>
+
+            <button
+                class="logout-btn"
+                id="logoutBtn"
+            >
+                🚪 Keluar
+            </button>
+
+        </div>
+
+    </aside>
+
+
+    <!-- MAIN -->
+
+    <main class="main">
+
+        <div class="topbar">
+
+            <div class="page-title">
+
+                <div style="display:flex;align-items:center;gap:10px;">
+
+                    <button
+                        class="mobile-menu"
+                        id="mobileMenu"
+                    >
+                        ☰
+                    </button>
+
+                    <div>
+                        <h1 id="pageTitle">
+                            Materi
+                        </h1>
+
+                        <p id="pageSubtitle">
+                            Semua materi dan file pembelajaranmu.
+                        </p>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="top-actions">
+
+                <button
+                    class="secondary-btn"
+                    id="addFolderBtn"
+                >
+                    + Kelompok
+                </button>
+
+                <button
+                    class="primary-btn"
+                    id="uploadBtn"
+                >
+                    ⬆ Upload File
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- SEARCH -->
+
+        <div class="search-box">
+
+            🔍
+
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Cari kelompok, file, catatan, atau kuis..."
+            >
+
+        </div>
+
+
+        <!-- STATS -->
+
+        <div class="stats">
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    📁
+                </div>
+
+                <div
+                    class="stat-value"
+                    id="folderCount"
+                >
+                    0
+                </div>
+
+                <div class="stat-label">
+                    Kelompok
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    📎
+                </div>
+
+                <div
+                    class="stat-value"
+                    id="fileCount"
+                >
+                    0
+                </div>
+
+                <div class="stat-label">
+                    File
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    📝
+                </div>
+
+                <div
+                    class="stat-value"
+                    id="noteCount"
+                >
+                    0
+                </div>
+
+                <div class="stat-label">
+                    Catatan
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    ❓
+                </div>
+
+                <div
+                    class="stat-value"
+                    id="quizCount"
+                >
+                    0
+                </div>
+
+                <div class="stat-label">
+                    Kuis
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- CONTENT -->
+
+        <div class="section-header">
+
+            <h2 id="contentTitle">
+                Kelompok Materi
+            </h2>
+
+            <div>
+                <button
+                    class="small-btn"
+                    id="addNoteBtn"
+                >
+                    + Catatan
+                </button>
+
+                <button
+                    class="small-btn"
+                    id="addQuizBtn"
+                >
+                    + Kuis
+                </button>
+            </div>
+
+        </div>
+
+        <div
+            class="content-grid"
+            id="contentGrid"
+        ></div>
+
+    </main>
+
+</div>
+
+</section>
+
+
+<!-- ================= FOLDER MODAL ================= -->
+
+<div
+    class="modal-overlay"
+    id="folderModal"
+>
+
+    <div class="modal">
+
+        <h2 id="folderModalTitle">
+            Tambah Kelompok
+        </h2>
+
+        <form id="folderForm">
+
+            <div class="modal-group">
+
+                <label>
+                    Nama kelompok
+                </label>
+
+                <input
+                    type="text"
+                    id="folderName"
+                    placeholder="Contoh: Sistem Digital"
+                    required
+                >
+
+            </div>
+
+            <div class="modal-group">
+
+                <label>
+                    Deskripsi
+                </label>
+
+                <textarea
+                    id="folderDescription"
+                    placeholder="Deskripsi kelompok..."
+                ></textarea>
+
+            </div>
+
+            <div class="modal-group">
+
+                <label>
+                    Kategori
+                </label>
+
+                <select id="folderCategory">
+
+                    <option value="materi">
+                        📚 Materi
+                    </option>
+
+                    <option value="ide">
+                        💡 Ide Kreatif
+                    </option>
+
+                    <option value="hikmah">
+                        📝 Pelajaran / Hikmah
+                    </option>
+
+                </select>
+
+            </div>
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    class="close-btn"
+                    data-close="folderModal"
+                >
+                    Batal
+                </button>
+
+                <button
+                    type="submit"
+                    class="save-btn"
+                >
+                    Simpan
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- ================= NOTE MODAL ================= -->
+
+<div
+    class="modal-overlay"
+    id="noteModal"
+>
+
+    <div class="modal">
+
+        <h2 id="noteModalTitle">
+            Tambah Catatan
+        </h2>
+
+        <form id="noteForm">
+
+            <div class="modal-group">
+
+                <label>
+                    Judul
+                </label>
+
+                <input
+                    type="text"
+                    id="noteTitle"
+                    required
+                >
+
+            </div>
+
+            <div class="modal-group">
+
+                <label>
+                    Catatan
+                </label>
+
+                <textarea
+                    id="noteContent"
+                    required
+                    placeholder="Tulis catatan..."
+                ></textarea>
+
+            </div>
+
+            <div class="modal-group">
+
+                <label>
+                    Kelompok
+                </label>
+
+                <select id="noteFolder"></select>
+
+            </div>
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    class="close-btn"
+                    data-close="noteModal"
+                >
+                    Batal
+                </button>
+
+                <button
+                    type="submit"
+                    class="save-btn"
+                >
+                    Simpan
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- ================= FILE MODAL ================= -->
+
+<div
+    class="modal-overlay"
+    id="fileModal"
+>
+
+    <div class="modal">
+
+        <h2>Upload File</h2>
+
+        <form id="fileForm">
+
+            <div class="modal-group">
+
+                <label>
+                    Pilih file
+                </label>
+
+                <input
+                    type="file"
+                    id="fileInput"
+                    required
+                >
+
+            </div>
+
+            <div class="modal-group">
+
+                <label>
+                    Kelompok
+                </label>
+
+                <select id="fileFolder"></select>
+
+            </div>
+
+            <div class="modal-group">
+
+                <label>
+                    Deskripsi
+                </label>
+
+                <textarea
+                    id="fileDescription"
+                    placeholder="Keterangan file..."
+                ></textarea>
+
+            </div>
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    class="close-btn"
+                    data-close="fileModal"
+                >
+                    Batal
+                </button>
+
+                <button
+                    type="submit"
+                    class="save-btn"
+                    id="uploadSubmitBtn"
+                >
+                    Upload
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- ================= QUIZ MODAL ================= -->
+
+<div
+    class="modal-overlay"
+    id="quizModal"
+>
+
+    <div class="modal">
+
+        <h2>Tambah Kuis</h2>
+
+        <form id="quizForm">
+
+            <div class="modal-group">
+
+                <label>
+                    Judul kuis
+                </label>
+
+                <input
+                    type="text"
+                    id="quizTitle"
+                    required
+                    placeholder="Contoh: Kuis Sistem Digital"
+                >
+
+            </div>
+
+            <div class="modal-group">
+
+                <label>
+                    Pertanyaan
+                </label>
+
+                <textarea
+                    id="quizQuestion"
+                    required
+                    placeholder="Tuliskan pertanyaan..."
+                ></textarea>
+
+            </div>
+
+            <div class="modal-group">
+
+                <label>
+                    Jawaban A
+                </label>
+
+                <input
+                    type="text"
+                    id="quizA"
+                    required
+                >
+
+            </div>
+
+            <div class="modal-group">
+
+                <label>
+                    Jawaban B
+                </label>
+
+                <input
+                    type="text"
+                    id="quizB"
+                    required
+                >
+
+            </div>
+
+            <div class="modal-group">
+
+                <label>
+                    Jawaban C
+                </label>
+
+                <input
+                    type="text"
+                    id="quizC"
+                    required
+                >
+
+            </div>
+
+            <div class="modal-group">
+
+                <label>
+                    Jawaban D
+                </label>
+
+                <input
+                    type="text"
+                    id="quizD"
+                    required
+                >
+
+            </div>
+
+            <div class="modal-group">
+
+                <label>
+                    Jawaban benar
+                </label>
+
+                <select id="quizAnswer">
+
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+
+                </select>
+
+            </div>
+
+            <div class="modal-group">
+
+                <label>
+                    Kelompok
+                </label>
+
+                <select id="quizFolder"></select>
+
+            </div>
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    class="close-btn"
+                    data-close="quizModal"
+                >
+                    Batal
+                </button>
+
+                <button
+                    type="submit"
+                    class="save-btn"
+                >
+                    Simpan
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- ================= QUIZ RUN MODAL ================= -->
+
+<div
+    class="modal-overlay"
+    id="quizRunModal"
+>
+
+    <div class="modal">
+
+        <h2 id="runQuizTitle">
+            Kuis
+        </h2>
+
+        <div id="quizRunContent"></div>
+
+        <div class="modal-actions">
+
+            <button
+                type="button"
+                class="close-btn"
+                data-close="quizRunModal"
+            >
+                Tutup
+            </button>
+
+            <button
+                type="button"
+                class="save-btn"
+                id="submitQuizBtn"
+            >
+                Periksa Jawaban
+            </button>
+
+        </div>
+
+        <div
+            class="quiz-result"
+            id="quizResult"
+            style="display:none"
+        ></div>
+
+    </div>
+
+</div>
+
+
+<!-- ================= IMAGE MODAL ================= -->
+
+<div
+    class="modal-overlay"
+    id="imageModal"
+>
+
+    <div class="modal">
+
+        <h2>Preview</h2>
+
+        <img
+            id="previewImage"
+            style="width:100%;border-radius:12px;"
+            alt="Preview"
+        >
+
+        <div class="modal-actions">
+
+            <button
+                type="button"
+                class="close-btn"
+                data-close="imageModal"
+            >
+                Tutup
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ================= TOAST ================= -->
+
+<div
+    id="toast"
+    style="
+        position:fixed;
+        right:20px;
+        bottom:20px;
+        background:#18223a;
+        border:1px solid #344363;
+        color:white;
+        padding:13px 17px;
+        border-radius:11px;
+        box-shadow:0 10px 30px rgba(0,0,0,.35);
+        display:none;
+        z-index:500;
+        max-width:350px;
+        font-size:13px;
+    "
+></div>
+
+
+<script type="module">
+
+/* =========================================================
+   FIREBASE IMPORT
+========================================================= */
+
+import {
+    initializeApp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
+import {
+    getAuth,
+    signInWithEmailAndPassword,
+    onAuthStateChanged,
+    signOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+import {
+    getDatabase,
+    ref,
+    get,
+    set,
+    update,
+    remove,
+    push
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+import {
+    getStorage,
+    ref as storageRef,
+    uploadBytes,
+    getDownloadURL,
+    deleteObject
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+
+/* =========================================================
+   FIREBASE CONFIG
+   CONFIG TERBARU DARI FIREBASE CONSOLE
+========================================================= */
+
+const firebaseConfig = {
+
+    apiKey:
+        "AIzaSyC5AyhUQ9c_hjJPdyf6teTb6t8j2IiwWqg",
+
+    authDomain:
+        "my-subject-c597d.firebaseapp.com",
+
+    databaseURL:
+        "https://my-subject-c597d-default-rtdb.asia-southeast1.firebasedatabase.app",
+
+    projectId:
+        "my-subject-c597d",
+
+    storageBucket:
+        "my-subject-c597d.firebasestorage.app",
+
+    messagingSenderId:
+        "515963479359",
+
+    appId:
+        "1:515963479359:web:95d59cd1ddbe9019769f8a",
+
+    measurementId:
+        "G-Q8F8LY7080"
+};
+
+
+/* =========================================================
+   INITIALIZE
+========================================================= */
+
+const app = initializeApp(firebaseConfig);
+
+const auth = getAuth(app);
+
+const db = getDatabase(app);
+
+const storage = getStorage(app);
+
+
+/* =========================================================
+   STATE
+========================================================= */
+
+let currentUser = null;
+
+let currentCategory = "materi";
+
+let editingFolderId = null;
+
+let editingNoteId = null;
+
+let runningQuiz = null;
+
+const state = {
+
+    folders: [],
+
+    files: [],
+
+    notes: [],
+
+    quizzes: []
+
+};
+
+
+/* =========================================================
+   USERNAME MAP
+========================================================= */
+
+const usernameMap = {
+
+    "fauzan":
+        "fauzanfadillahhh@gmail.com",
+
+    "fauzan fadillah":
+        "fauzanfadillahhh@gmail.com",
+
+    "fauzanfadillah":
+        "fauzanfadillahhh@gmail.com",
+
+    "fauzangaming":
+        "fauzangaming646@gmail.com"
+
+};
+
+
+/* =========================================================
+   DOM
+========================================================= */
+
+const loginPage =
+    document.getElementById("loginPage");
+
+const appPage =
+    document.getElementById("appPage");
+
+const loginForm =
+    document.getElementById("loginForm");
+
+const usernameInput =
+    document.getElementById("username");
+
+const passwordInput =
+    document.getElementById("password");
+
+const loginBtn =
+    document.getElementById("loginBtn");
+
+const loginError =
+    document.getElementById("loginError");
+
+const logoutBtn =
+    document.getElementById("logoutBtn");
+
+const contentGrid =
+    document.getElementById("contentGrid");
+
+const searchInput =
+    document.getElementById("searchInput");
+
+const sidebar =
+    document.getElementById("sidebar");
+
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function escapeHTML(value){
+
+    return String(value ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+}
+
+
+function showToast(message,type="success"){
+
+    const toast =
+        document.getElementById("toast");
+
+    toast.textContent = message;
+
+    toast.style.display = "block";
+
+    toast.style.borderColor =
+        type === "error"
+            ? "#7f2938"
+            : "#344363";
+
+    clearTimeout(window.toastTimer);
+
+    window.toastTimer =
+        setTimeout(()=>{
+            toast.style.display = "none";
+        },3500);
+}
+
+
+function openModal(id){
+
+    document
+        .getElementById(id)
+        .classList.add("show");
+
+}
+
+
+function closeModal(id){
+
+    document
+        .getElementById(id)
+        .classList.remove("show");
+
+}
+
+
+function updateCloudStatus(type,text){
+
+    const dot =
+        document.getElementById("statusDot");
+
+    const label =
+        document.getElementById("cloudStatus");
+
+    dot.className =
+        "status-dot " + type;
+
+    label.textContent = text;
+
+}
+
+
+function firebaseError(error){
+
+    if(!error) return "Unknown error";
+
+    const code =
+        error.code || "";
+
+    if(code.includes("permission-denied"))
+        return "Permission ditolak Firebase. Periksa Rules.";
+
+    if(code.includes("unauthorized"))
+        return "User belum memiliki izin.";
+
+    if(code.includes("api-key-not-valid"))
+        return "API Key Firebase tidak valid.";
+
+    if(code.includes("auth/invalid-credential"))
+        return "Username atau password salah.";
+
+    if(code.includes("auth/invalid-email"))
+        return "Email akun Firebase tidak valid.";
+
+    if(code.includes("auth/user-not-found"))
+        return "Akun belum terdaftar di Firebase Authentication.";
+
+    if(code.includes("auth/wrong-password"))
+        return "Password salah.";
+
+    if(code.includes("storage/unauthorized"))
+        return "Tidak memiliki izin Firebase Storage.";
+
+    if(code.includes("storage/canceled"))
+        return "Upload dibatalkan.";
+
+    return error.message || code || "Terjadi kesalahan.";
+}
+
+
+/* =========================================================
+   DATABASE PATH
+========================================================= */
+
+function basePath(){
+
+    if(!currentUser)
+        throw new Error("User belum login.");
+
+    return (
+        "users/" +
+        currentUser.uid +
+        "/mysubject"
+    );
+}
+
+
+/* =========================================================
+   DATABASE READ
+========================================================= */
+
+async function cloudGet(collection){
+
+    const path =
+        `${basePath()}/${collection}`;
+
+    const snapshot =
+        await get(ref(db,path));
+
+    if(!snapshot.exists())
+        return [];
+
+    const value =
+        snapshot.val();
+
+    if(
+        typeof value !== "object" ||
+        value === null
+    ){
+        return [];
+    }
+
+    return Object.entries(value)
+        .map(([id,data])=>({
+            id,
+            ...(data || {})
+        }));
+
+}
+
+
+/* =========================================================
+   DATABASE WRITE
+========================================================= */
+
+async function cloudAdd(collection,data){
+
+    const newRef =
+        push(
+            ref(
+                db,
+                `${basePath()}/${collection}`
+            )
+        );
+
+    await set(newRef,data);
+
+    return newRef.key;
+
+}
+
+
+async function cloudUpdate(collection,id,data){
+
+    await update(
+        ref(
+            db,
+            `${basePath()}/${collection}/${id}`
+        ),
+        data
+    );
+
+}
+
+
+async function cloudDelete(collection,id){
+
+    await remove(
+        ref(
+            db,
+            `${basePath()}/${collection}/${id}`
+        )
+    );
+
+}
+
+
+/* =========================================================
+   REFRESH ALL DATA
+========================================================= */
+
+async function refresh(){
+
+    if(!currentUser)
+        return;
+
+    try{
+
+        updateCloudStatus(
+            "loading",
+            "Mengambil data dari Firebase..."
+        );
+
+        const results =
+            await Promise.all([
+
+                cloudGet("folders"),
+
+                cloudGet("files"),
+
+                cloudGet("notes"),
+
+                cloudGet("quizzes")
+
+            ]);
+
+
+        state.folders =
+            results[0];
+
+        state.files =
+            results[1];
+
+        state.notes =
+            results[2];
+
+        state.quizzes =
+            results[3];
+
+
+        render();
+
+        updateStats();
+
+        updateCloudStatus(
+            "online",
+            "Firebase tersinkron"
+        );
+
+    }catch(error){
+
+        console.error(
+            "FIREBASE ERROR:",
+            error
+        );
+
+        updateCloudStatus(
+            "error",
+            "Firebase gagal diakses"
+        );
+
+        showToast(
+            "Firebase Error: " +
+            firebaseError(error),
+            "error"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   CATEGORY
+========================================================= */
+
+const categoryInfo = {
+
+    materi:{
+        title:"Materi",
+        subtitle:
+            "Semua materi dan file pembelajaranmu.",
+        folderTitle:
+            "Kelompok Materi"
+    },
+
+    ide:{
+        title:"Ide Kreatif",
+        subtitle:
+            "Tempat menyimpan ide dan proyek kreatif.",
+        folderTitle:
+            "Kelompok Ide"
+    },
+
+    hikmah:{
+        title:"Pelajaran / Hikmah",
+        subtitle:
+            "Catatan pelajaran dan hal penting yang kamu dapatkan.",
+        folderTitle:
+            "Kelompok Pelajaran"
+    }
+
+};
+
+
+function setCategory(category){
+
+    currentCategory =
+        category;
+
+    document
+        .querySelectorAll(".nav-btn")
+        .forEach(btn=>{
+
+            btn.classList.toggle(
+                "active",
+                btn.dataset.category === category
+            );
+
+        });
+
+
+    const info =
+        categoryInfo[category];
+
+
+    document.getElementById(
+        "pageTitle"
+    ).textContent =
+        info.title;
+
+
+    document.getElementById(
+        "pageSubtitle"
+    ).textContent =
+        info.subtitle;
+
+
+    document.getElementById(
+        "contentTitle"
+    ).textContent =
+        info.folderTitle;
+
+
+    render();
+
+}
+
+
+/* =========================================================
+   RENDER
+========================================================= */
+
+function render(){
+
+    const search =
+        searchInput.value
+            .trim()
+            .toLowerCase();
+
+
+    let folders =
+        state.folders.filter(
+            folder =>
+                folder.category ===
+                currentCategory
+        );
+
+
+    if(search){
+
+        folders =
+            folders.filter(folder =>
+
+                String(
+                    folder.name || ""
+                )
+                .toLowerCase()
+                .includes(search)
+
+                ||
+
+                String(
+                    folder.description || ""
+                )
+                .toLowerCase()
+                .includes(search)
+
+            );
+
+    }
+
+
+    const cards = [];
+
+
+    folders.forEach(folder=>{
+
+        const fileCount =
+            state.files.filter(
+                file =>
+                    file.folderId === folder.id
+            ).length;
+
+
+        const noteCount =
+            state.notes.filter(
+                note =>
+                    note.folderId === folder.id
+            ).length;
+
+
+        const quizCount =
+            state.quizzes.filter(
+                quiz =>
+                    quiz.folderId === folder.id
+            ).length;
+
+
+        cards.push(`
+
+            <div
+                class="card folder-card"
+                data-folder="${escapeHTML(folder.id)}"
+            >
+
+                <div class="card-icon">
+                    📁
+                </div>
+
+                <div class="card-title">
+                    ${escapeHTML(folder.name)}
+                </div>
+
+                <div class="card-description">
+                    ${escapeHTML(
+                        folder.description || "Tidak ada deskripsi."
+                    )}
+                </div>
+
+                <div class="card-meta">
+                    ${fileCount} file ·
+                    ${noteCount} catatan ·
+                    ${quizCount} kuis
+                </div>
+
+                <div class="card-actions">
+
+                    <button
+                        class="small-btn edit-folder"
+                        data-id="${folder.id}"
+                    >
+                        ✏️ Edit
+                    </button>
+
+                    <button
+                        class="small-btn danger delete-folder"
+                        data-id="${folder.id}"
+                    >
+                        🗑️
+                    </button>
+
+                </div>
+
+            </div>
+
+        `);
+
+    });
+
+
+    /* FILES */
+
+    let files =
+        state.files.filter(
+            file =>
+                file.category ===
+                currentCategory
+        );
+
+
+    if(search){
+
+        files =
+            files.filter(file =>
+
+                String(
+                    file.name || ""
+                )
+                .toLowerCase()
+                .includes(search)
+
+                ||
+
+                String(
+                    file.description || ""
+                )
+                .toLowerCase()
+                .includes(search)
+
+            );
+
+    }
+
+
+    files.forEach(file=>{
+
+        cards.push(`
+
+            <div class="card">
+
+                <div class="card-icon">
+                    📎
+                </div>
+
+                <div class="card-title">
+                    ${escapeHTML(file.name)}
+                </div>
+
+                <div class="card-description">
+                    ${escapeHTML(
+                        file.description || "File"
+                    )}
+                </div>
+
+                <div class="card-meta">
+                    ${escapeHTML(
+                        file.folderName || "Tanpa kelompok"
+                    )}
+                </div>
+
+                <div class="card-actions">
+
+                    <a
+                        class="small-btn file-link"
+                        href="${escapeHTML(file.url)}"
+                        target="_blank"
+                        rel="noopener"
+                    >
+                        🔗 Buka
+                    </a>
+
+                    <button
+                        class="small-btn danger delete-file"
+                        data-id="${file.id}"
+                    >
+                        🗑️ Hapus
+                    </button>
+
+                </div>
+
+            </div>
+
+        `);
+
+    });
+
+
+    /* NOTES */
+
+    let notes =
+        state.notes.filter(
+            note =>
+                note.category ===
+                currentCategory
+        );
+
+
+    if(search){
+
+        notes =
+            notes.filter(note =>
+
+                String(
+                    note.title || ""
+                )
+                .toLowerCase()
+                .includes(search)
+
+                ||
+
+                String(
+                    note.content || ""
+                )
+                .toLowerCase()
+                .includes(search)
+
+            );
+
+    }
+
+
+    notes.forEach(note=>{
+
+        cards.push(`
+
+            <div class="card">
+
+                <div class="card-icon">
+                    📝
+                </div>
+
+                <div class="card-title">
+                    ${escapeHTML(note.title)}
+                </div>
+
+                <div class="note-preview">
+                    ${escapeHTML(note.content)}
+                </div>
+
+                <div class="card-meta">
+                    ${escapeHTML(
+                        note.folderName || "Tanpa kelompok"
+                    )}
+                </div>
+
+                <div class="card-actions">
+
+                    <button
+                        class="small-btn edit-note"
+                        data-id="${note.id}"
+                    >
+                        ✏️ Edit
+                    </button>
+
+                    <button
+                        class="small-btn danger delete-note"
+                        data-id="${note.id}"
+                    >
+                        🗑️
+                    </button>
+
+                </div>
+
+            </div>
+
+        `);
+
+    });
+
+
+    /* QUIZZES */
+
+    let quizzes =
+        state.quizzes.filter(
+            quiz =>
+                quiz.category ===
+                currentCategory
+        );
+
+
+    if(search){
+
+        quizzes =
+            quizzes.filter(quiz =>
+
+                String(
+                    quiz.title || ""
+                )
+                .toLowerCase()
+                .includes(search)
+
+                ||
+
+                String(
+                    quiz.question || ""
+                )
+                .toLowerCase()
+                .includes(search)
+
+            );
+
+    }
+
+
+    quizzes.forEach(quiz=>{
+
+        cards.push(`
+
+            <div class="card">
+
+                <div class="card-icon">
+                    ❓
+                </div>
+
+                <div class="card-title">
+                    ${escapeHTML(quiz.title)}
+                </div>
+
+                <div class="card-description">
+                    ${escapeHTML(quiz.question)}
+                </div>
+
+                <div class="card-meta">
+                    ${escapeHTML(
+                        quiz.folderName || "Tanpa kelompok"
+                    )}
+                </div>
+
+                <div class="card-actions">
+
+                    <button
+                        class="small-btn run-quiz"
+                        data-id="${quiz.id}"
+                    >
+                        ▶ Kerjakan
+                    </button>
+
+                    <button
+                        class="small-btn danger delete-quiz"
+                        data-id="${quiz.id}"
+                    >
+                        🗑️
+                    </button>
+
+                </div>
+
+            </div>
+
+        `);
+
+    });
+
+
+    if(cards.length === 0){
+
+        contentGrid.innerHTML = `
+
+            <div class="empty">
+
+                <div style="font-size:35px;margin-bottom:12px;">
+                    📂
+                </div>
+
+                Belum ada data di kategori ini.
+
+                <br><br>
+
+                Gunakan tombol
+                <b>+ Kelompok</b>,
+                <b>+ Catatan</b>,
+                <b>+ Kuis</b>,
+                atau
+                <b>Upload File</b>.
+
+            </div>
+
+        `;
+
+    }else{
+
+        contentGrid.innerHTML =
+            cards.join("");
+
+    }
+
+}
+
+
+/* =========================================================
+   STATS
+========================================================= */
+
+function updateStats(){
+
+    document.getElementById(
+        "folderCount"
+    ).textContent =
+        state.folders.length;
+
+    document.getElementById(
+        "fileCount"
+    ).textContent =
+        state.files.length;
+
+    document.getElementById(
+        "noteCount"
+    ).textContent =
+        state.notes.length;
+
+    document.getElementById(
+        "quizCount"
+    ).textContent =
+        state.quizzes.length;
+
+}
+
+
+/* =========================================================
+   FOLDER SELECT
+========================================================= */
+
+function populateFolderSelects(){
+
+    const selects = [
+
+        document.getElementById(
+            "noteFolder"
+        ),
+
+        document.getElementById(
+            "fileFolder"
+        ),
+
+        document.getElementById(
+            "quizFolder"
+        )
+
+    ];
+
+
+    selects.forEach(select=>{
+
+        select.innerHTML =
+            `<option value="">
+                Tanpa kelompok
+            </option>`;
+
+
+        state.folders
+            .filter(
+                folder =>
+                    folder.category ===
+                    currentCategory
+            )
+            .forEach(folder=>{
+
+                const option =
+                    document.createElement(
+                        "option"
+                    );
+
+                option.value =
+                    folder.id;
+
+                option.textContent =
+                    folder.name;
+
+                select.appendChild(
+                    option
+                );
+
+            });
+
+    });
+
+}
+
+
+/* =========================================================
+   FOLDER FORM
+========================================================= */
+
+document
+    .getElementById("addFolderBtn")
+    .addEventListener(
+        "click",
+        ()=>{
+
+            editingFolderId =
+                null;
+
+            document.getElementById(
+                "folderModalTitle"
+            ).textContent =
+                "Tambah Kelompok";
+
+            document.getElementById(
+                "folderForm"
+            ).reset();
+
+            document.getElementById(
+                "folderCategory"
+            ).value =
+                currentCategory;
+
+            openModal(
+                "folderModal"
+            );
+
+        }
+    );
+
+
+document
+    .getElementById("folderForm")
+    .addEventListener(
+        "submit",
+        async event=>{
+
+            event.preventDefault();
+
+            const name =
+                document.getElementById(
+                    "folderName"
+                ).value.trim();
+
+            const description =
+                document.getElementById(
+                    "folderDescription"
+                ).value.trim();
+
+            const category =
+                document.getElementById(
+                    "folderCategory"
+                ).value;
+
+
+            if(!name){
+
+                showToast(
+                    "Nama kelompok wajib diisi.",
+                    "error"
+                );
+
+                return;
+
+            }
+
+
+            try{
+
+                if(editingFolderId){
+
+                    await cloudUpdate(
+                        "folders",
+                        editingFolderId,
+                        {
+                            name,
+                            description,
+                            category
+                        }
+                    );
+
+                    showToast(
+                        "Kelompok berhasil diperbarui."
+                    );
+
+                }else{
+
+                    await cloudAdd(
+                        "folders",
+                        {
+                            name,
+                            description,
+                            category,
+                            createdAt:
+                                Date.now()
+                        }
+                    );
+
+                    showToast(
+                        "Kelompok berhasil ditambahkan."
+                    );
+
+                }
+
+
+                closeModal(
+                    "folderModal"
+                );
+
+                await refresh();
+
+            }catch(error){
+
+                showToast(
+                    firebaseError(error),
+                    "error"
+                );
+
+            }
+
+        }
+    );
+
+
+/* =========================================================
+   EDIT / DELETE FOLDER
+========================================================= */
+
+contentGrid.addEventListener(
+    "click",
+    async event=>{
+
+        const editFolder =
+            event.target.closest(
+                ".edit-folder"
+            );
+
+        const deleteFolder =
+            event.target.closest(
+                ".delete-folder"
+            );
+
+
+        if(editFolder){
+
+            const id =
+                editFolder.dataset.id;
+
+            const folder =
+                state.folders.find(
+                    x => x.id === id
+                );
+
+            if(!folder)
+                return;
+
+
+            editingFolderId =
+                id;
+
+
+            document.getElementById(
+                "folderModalTitle"
+            ).textContent =
+                "Edit Kelompok";
+
+
+            document.getElementById(
+                "folderName"
+            ).value =
+                folder.name || "";
+
+
+            document.getElementById(
+                "folderDescription"
+            ).value =
+                folder.description || "";
+
+
+            document.getElementById(
+                "folderCategory"
+            ).value =
+                folder.category ||
+                currentCategory;
+
+
+            openModal(
+                "folderModal"
+            );
+
+            return;
+
+        }
+
+
+        if(deleteFolder){
+
+            const id =
+                deleteFolder.dataset.id;
+
+            const folder =
+                state.folders.find(
+                    x => x.id === id
+                );
+
+
+            if(!folder)
+                return;
+
+
+            if(
+                !confirm(
+                    `Hapus kelompok "${folder.name}"?`
+                )
+            )
+                return;
+
+
+            try{
+
+                await cloudDelete(
+                    "folders",
+                    id
+                );
+
+                showToast(
+                    "Kelompok berhasil dihapus."
+                );
+
+                await refresh();
+
+            }catch(error){
+
+                showToast(
+                    firebaseError(error),
+                    "error"
+                );
+
+            }
+
+            return;
+
+        }
+
+
+        /* EDIT NOTE */
+
+        const editNote =
+            event.target.closest(
+                ".edit-note"
+            );
+
+        if(editNote){
+
+            const id =
+                editNote.dataset.id;
+
+            const note =
+                state.notes.find(
+                    x => x.id === id
+                );
+
+            if(!note)
+                return;
+
+
+            editingNoteId =
+                id;
+
+
+            document.getElementById(
+                "noteModalTitle"
+            ).textContent =
+                "Edit Catatan";
+
+
+            document.getElementById(
+                "noteTitle"
+            ).value =
+                note.title || "";
+
+
+            document.getElementById(
+                "noteContent"
+            ).value =
+                note.content || "";
+
+
+            populateFolderSelects();
+
+
+            document.getElementById(
+                "noteFolder"
+            ).value =
+                note.folderId || "";
+
+
+            openModal(
+                "noteModal"
+            );
+
+            return;
+
+        }
+
+
+        /* DELETE NOTE */
+
+        const deleteNote =
+            event.target.closest(
+                ".delete-note"
+            );
+
+        if(deleteNote){
+
+            const id =
+                deleteNote.dataset.id;
+
+            if(
+                !confirm(
+                    "Hapus catatan ini?"
+                )
+            )
+                return;
+
+
+            try{
+
+                await cloudDelete(
+                    "notes",
+                    id
+                );
+
+                showToast(
+                    "Catatan berhasil dihapus."
+                );
+
+                await refresh();
+
+            }catch(error){
+
+                showToast(
+                    firebaseError(error),
+                    "error"
+                );
+
+            }
+
+            return;
+
+        }
+
+
+        /* DELETE FILE */
+
+        const deleteFile =
+            event.target.closest(
+                ".delete-file"
+            );
+
+        if(deleteFile){
+
+            const id =
+                deleteFile.dataset.id;
+
+            const file =
+                state.files.find(
+                    x => x.id === id
+                );
+
+
+            if(
+                !confirm(
+                    `Hapus file "${file?.name || ""}"?`
+                )
+            )
+                return;
+
+
+            try{
+
+                if(file?.storagePath){
+
+                    try{
+
+                        await deleteObject(
+                            storageRef(
+                                storage,
+                                file.storagePath
+                            )
+                        );
+
+                    }catch(storageError){
+
+                        console.warn(
+                            "Storage delete:",
+                            storageError
+                        );
+
+                    }
+
+                }
+
+
+                await cloudDelete(
+                    "files",
+                    id
+                );
+
+                showToast(
+                    "File berhasil dihapus."
+                );
+
+                await refresh();
+
+            }catch(error){
+
+                showToast(
+                    firebaseError(error),
+                    "error"
+                );
+
+            }
+
+            return;
+
+        }
+
+
+        /* DELETE QUIZ */
+
+        const deleteQuiz =
+            event.target.closest(
+                ".delete-quiz"
+            );
+
+        if(deleteQuiz){
+
+            const id =
+                deleteQuiz.dataset.id;
+
+
+            if(
+                !confirm(
+                    "Hapus kuis ini?"
+                )
+            )
+                return;
+
+
+            try{
+
+                await cloudDelete(
+                    "quizzes",
+                    id
+                );
+
+                showToast(
+                    "Kuis berhasil dihapus."
+                );
+
+                await refresh();
+
+            }catch(error){
+
+                showToast(
+                    firebaseError(error),
+                    "error"
+                );
+
+            }
+
+            return;
+
+        }
+
+
+        /* RUN QUIZ */
+
+        const runQuiz =
+            event.target.closest(
+                ".run-quiz"
+            );
+
+        if(runQuiz){
+
+            const id =
+                runQuiz.dataset.id;
+
+            openQuiz(id);
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   NOTE
+========================================================= */
+
+document
+    .getElementById("addNoteBtn")
+    .addEventListener(
+        "click",
+        ()=>{
+
+            editingNoteId =
+                null;
+
+            document.getElementById(
+                "noteModalTitle"
+            ).textContent =
+                "Tambah Catatan";
+
+
+            document.getElementById(
+                "noteForm"
+            ).reset();
+
+
+            populateFolderSelects();
+
+            openModal(
+                "noteModal"
+            );
+
+        }
+    );
+
+
+document
+    .getElementById("noteForm")
+    .addEventListener(
+        "submit",
+        async event=>{
+
+            event.preventDefault();
+
+
+            const title =
+                document.getElementById(
+                    "noteTitle"
+                ).value.trim();
+
+
+            const content =
+                document.getElementById(
+                    "noteContent"
+                ).value.trim();
+
+
+            const folderId =
+                document.getElementById(
+                    "noteFolder"
+                ).value;
+
+
+            const folder =
+                state.folders.find(
+                    x => x.id === folderId
+                );
+
+
+            try{
+
+                const data = {
+
+                    title,
+
+                    content,
+
+                    folderId,
+
+                    folderName:
+                        folder?.name || "",
+
+                    category:
+                        currentCategory,
+
+                    updatedAt:
+                        Date.now()
+
+                };
+
+
+                if(editingNoteId){
+
+                    await cloudUpdate(
+                        "notes",
+                        editingNoteId,
+                        data
+                    );
+
+                    showToast(
+                        "Catatan berhasil diperbarui."
+                    );
+
+                }else{
+
+                    await cloudAdd(
+                        "notes",
+                        {
+                            ...data,
+                            createdAt:
+                                Date.now()
+                        }
+                    );
+
+                    showToast(
+                        "Catatan berhasil ditambahkan."
+                    );
+
+                }
+
+
+                closeModal(
+                    "noteModal"
+                );
+
+                await refresh();
+
+            }catch(error){
+
+                showToast(
+                    firebaseError(error),
+                    "error"
+                );
+
+            }
+
+        }
+    );
+
+
+/* =========================================================
+   FILE UPLOAD
+========================================================= */
+
+document
+    .getElementById("uploadBtn")
+    .addEventListener(
+        "click",
+        ()=>{
+
+            document
+                .getElementById("fileForm")
+                .reset();
+
+            populateFolderSelects();
+
+            openModal(
+                "fileModal"
+            );
+
+        }
+    );
+
+
+document
+    .getElementById("fileForm")
+    .addEventListener(
+        "submit",
+        async event=>{
+
+            event.preventDefault();
+
+
+            const input =
+                document.getElementById(
+                    "fileInput"
+                );
+
+
+            const file =
+                input.files[0];
+
+
+            if(!file){
+
+                showToast(
+                    "Pilih file terlebih dahulu.",
+                    "error"
+                );
+
+                return;
+
+            }
+
+
+            const folderId =
+                document.getElementById(
+                    "fileFolder"
+                ).value;
+
+
+            const folder =
+                state.folders.find(
+                    x => x.id === folderId
+                );
+
+
+            const description =
+                document.getElementById(
+                    "fileDescription"
+                ).value.trim();
+
+
+            const uploadButton =
+                document.getElementById(
+                    "uploadSubmitBtn"
+                );
+
+
+            uploadButton.disabled =
+                true;
+
+            uploadButton.textContent =
+                "Uploading...";
+
+
+            try{
+
+                const safeName =
+                    file.name.replace(
+                        /[^a-zA-Z0-9._-]/g,
+                        "_"
+                    );
+
+
+                const storagePath =
+                    `users/${currentUser.uid}/mysubject/files/${Date.now()}_${safeName}`;
+
+
+                const fileRef =
+                    storageRef(
+                        storage,
+                        storagePath
+                    );
+
+
+                await uploadBytes(
+                    fileRef,
+                    file
+                );
+
+
+                const url =
+                    await getDownloadURL(
+                        fileRef
+                    );
+
+
+                await cloudAdd(
+                    "files",
+                    {
+
+                        name:
+                            file.name,
+
+                        description,
+
+                        url,
+
+                        storagePath,
+
+                        size:
+                            file.size,
+
+                        type:
+                            file.type,
+
+                        folderId,
+
+                        folderName:
+                            folder?.name || "",
+
+                        category:
+                            currentCategory,
+
+                        createdAt:
+                            Date.now()
+
+                    }
+                );
+
+
+                showToast(
+                    "File berhasil diupload ke Firebase."
+                );
+
+
+                closeModal(
+                    "fileModal"
+                );
+
+
+                await refresh();
+
+            }catch(error){
+
+                console.error(
+                    "UPLOAD ERROR:",
+                    error
+                );
+
+                showToast(
+                    "Upload gagal: " +
+                    firebaseError(error),
+                    "error"
+                );
+
+            }finally{
+
+                uploadButton.disabled =
+                    false;
+
+                uploadButton.textContent =
+                    "Upload";
+
+            }
+
+        }
+    );
+
+
+/* =========================================================
+   QUIZ
+========================================================= */
+
+document
+    .getElementById("addQuizBtn")
+    .addEventListener(
+        "click",
+        ()=>{
+
+            document
+                .getElementById("quizForm")
+                .reset();
+
+            populateFolderSelects();
+
+            openModal(
+                "quizModal"
+            );
+
+        }
+    );
+
+
+document
+    .getElementById("quizForm")
+    .addEventListener(
+        "submit",
+        async event=>{
+
+            event.preventDefault();
+
+
+            const title =
+                document.getElementById(
+                    "quizTitle"
+                ).value.trim();
+
+
+            const question =
+                document.getElementById(
+                    "quizQuestion"
+                ).value.trim();
+
+
+            const folderId =
+                document.getElementById(
+                    "quizFolder"
+                ).value;
+
+
+            const folder =
+                state.folders.find(
+                    x => x.id === folderId
+                );
+
+
+            const data = {
+
+                title,
+
+                question,
+
+                options:{
+
+                    A:
+                        document.getElementById(
+                            "quizA"
+                        ).value.trim(),
+
+                    B:
+                        document.getElementById(
+                            "quizB"
+                        ).value.trim(),
+
+                    C:
+                        document.getElementById(
+                            "quizC"
+                        ).value.trim(),
+
+                    D:
+                        document.getElementById(
+                            "quizD"
+                        ).value.trim()
+
+                },
+
+                answer:
+                    document.getElementById(
+                        "quizAnswer"
+                    ).value,
+
+                folderId,
+
+                folderName:
+                    folder?.name || "",
+
+                category:
+                    currentCategory,
+
+                createdAt:
+                    Date.now()
+
+            };
+
+
+            try{
+
+                await cloudAdd(
+                    "quizzes",
+                    data
+                );
+
+                showToast(
+                    "Kuis berhasil dibuat."
+                );
+
+                closeModal(
+                    "quizModal"
+                );
+
+                await refresh();
+
+            }catch(error){
+
+                showToast(
+                    firebaseError(error),
+                    "error"
+                );
+
+            }
+
+        }
+    );
+
+
+/* =========================================================
+   RUN QUIZ
+========================================================= */
+
+function openQuiz(id){
+
+    const quiz =
+        state.quizzes.find(
+            x => x.id === id
+        );
+
+
+    if(!quiz)
+        return;
+
+
+    runningQuiz =
+        quiz;
+
+
+    document.getElementById(
+        "runQuizTitle"
+    ).textContent =
+        quiz.title;
+
+
+    document.getElementById(
+        "quizResult"
+    ).style.display =
+        "none";
+
+
+    document.getElementById(
+        "quizResult"
+    ).innerHTML = "";
+
+
+    document.getElementById(
+        "quizRunContent"
+    ).innerHTML = `
+
+        <div class="quiz-question">
+
+            <h4>
+                ${escapeHTML(quiz.question)}
+            </h4>
+
+            ${["A","B","C","D"]
+                .map(letter=>`
+
+                    <label class="quiz-option">
+
+                        <input
+                            type="radio"
+                            name="runQuizAnswer"
+                            value="${letter}"
+                        >
+
+                        <b>${letter}.</b>
+                        ${escapeHTML(
+                            quiz.options?.[letter] || ""
+                        )}
+
+                    </label>
+
+                `)
+                .join("")}
+
+        </div>
+
+    `;
+
+
+    openModal(
+        "quizRunModal"
+    );
+
+}
+
+
+document
+    .getElementById("submitQuizBtn")
+    .addEventListener(
+        "click",
+        ()=>{
+
+            if(!runningQuiz)
+                return;
+
+
+            const selected =
+                document.querySelector(
+                    'input[name="runQuizAnswer"]:checked'
+                );
+
+
+            const result =
+                document.getElementById(
+                    "quizResult"
+                );
+
+
+            if(!selected){
+
+                result.style.display =
+                    "block";
+
+                result.textContent =
+                    "Pilih jawaban terlebih dahulu.";
+
+                return;
+
+            }
+
+
+            const correct =
+                selected.value ===
+                runningQuiz.answer;
+
+
+            result.style.display =
+                "block";
+
+
+            if(correct){
+
+                result.innerHTML =
+                    "🎉 <b>Benar!</b><br>Jawaban kamu tepat.";
+
+            }else{
+
+                result.innerHTML =
+                    `❌ <b>Salah.</b><br>
+                    Jawaban yang benar:
+                    <b>${escapeHTML(
+                        runningQuiz.answer
+                    )}</b>`;
+
+            }
+
+        }
+    );
+
+
+/* =========================================================
+   SEARCH
+========================================================= */
+
+searchInput.addEventListener(
+    "input",
+    render
+);
+
+
+/* =========================================================
+   CATEGORY BUTTONS
+========================================================= */
+
+document
+    .querySelectorAll(".nav-btn")
+    .forEach(btn=>{
+
+        btn.addEventListener(
+            "click",
+            ()=>{
+
+                setCategory(
+                    btn.dataset.category
+                );
+
+                sidebar.classList.remove(
+                    "open"
+                );
+
+            }
+        );
+
+    });
+
+
+/* =========================================================
+   MOBILE MENU
+========================================================= */
+
+document
+    .getElementById("mobileMenu")
+    .addEventListener(
+        "click",
+        ()=>{
+
+            sidebar.classList.toggle(
+                "open"
+            );
+
+        }
+    );
+
+
+/* =========================================================
+   CLOSE MODALS
+========================================================= */
+
+document
+    .querySelectorAll("[data-close]")
+    .forEach(button=>{
+
+        button.addEventListener(
+            "click",
+            ()=>{
+
+                closeModal(
+                    button.dataset.close
+                );
+
+            }
+        );
+
+    });
+
+
+document
+    .querySelectorAll(".modal-overlay")
+    .forEach(overlay=>{
+
+        overlay.addEventListener(
+            "click",
+            event=>{
+
+                if(
+                    event.target ===
+                    overlay
+                ){
+
+                    overlay.classList.remove(
+                        "show"
+                    );
+
+                }
+
+            }
+        );
+
+    });
+
+
+/* =========================================================
+   LOGOUT
+========================================================= */
+
+logoutBtn.addEventListener(
+    "click",
+    async ()=>{
+
+        try{
+
+            await signOut(auth);
+
+        }catch(error){
+
+            showToast(
+                firebaseError(error),
+                "error"
+            );
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   LOGIN
+========================================================= */
+
+loginForm.addEventListener(
+    "submit",
+    async event=>{
+
+        event.preventDefault();
+
+
+        loginError.textContent =
+            "";
+
+
+        const username =
+            usernameInput.value
+                .trim()
+                .toLowerCase();
+
+
+        const password =
+            passwordInput.value;
+
+
+        const email =
+            usernameMap[username];
+
+
+        if(!email){
+
+            loginError.textContent =
+                "Username tidak dikenali.";
+
+            return;
+
+        }
+
+
+        loginBtn.disabled =
+            true;
+
+        loginBtn.textContent =
+            "Login...";
+
+
+        try{
+
+            await signInWithEmailAndPassword(
+                auth,
+                email,
+                password
+            );
+
+
+        }catch(error){
+
+            console.error(
+                "LOGIN ERROR:",
+                error
+            );
+
+
+            loginError.textContent =
+                firebaseError(error);
+
+
+        }finally{
+
+            loginBtn.disabled =
+                false;
+
+            loginBtn.textContent =
+                "Login";
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   AUTH STATE
+========================================================= */
+
+onAuthStateChanged(
+    auth,
+    async user=>{
+
+        if(user){
+
+            currentUser =
+                user;
+
+
+            loginPage.style.display =
+                "none";
+
+
+            appPage.style.display =
+                "block";
+
+
+            updateCloudStatus(
+                "loading",
+                "Menghubungkan Firebase..."
+            );
+
+
+            await refresh();
+
+
+        }else{
+
+            currentUser =
+                null;
+
+
+            loginPage.style.display =
+                "flex";
+
+
+            appPage.style.display =
+                "none";
+
+
+            updateCloudStatus(
+                "",
+                "Belum login"
+            );
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   INITIAL UI
+========================================================= */
+
+setCategory("materi");
+
+</script>
+
+</body>
+</html>
+```
