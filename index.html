@@ -1794,6 +1794,29 @@ const state = {
 
 };
 
+window.__mySubjectState = state;
+
+// Called by Firebase realtime listeners so changes on another device appear without reload.
+window.MySubjectReceiveCloudData = async function(collection, items){
+    if(!["folders","files","notes","quizzes"].includes(collection)) return;
+    if(collection === "files"){
+        items = await Promise.all(items.map(async file=>{
+            try{
+                const saved = await getLocalFile(file.id);
+                if(saved && saved.blob) file.url = URL.createObjectURL(saved.blob);
+            }catch(error){ console.warn("File lokal tidak dapat dibaca:",error); }
+            return file;
+        }));
+    }
+    state[collection] = items;
+    if(currentUser){
+        if(currentFolderId && !getFolder(currentFolderId)) currentFolderId = null;
+        render();
+        updateStats();
+        updateCloudStatus("online","Tersinkron ke Firebase");
+    }
+};
+
 
 /* =========================================================
    USERNAME MAP
@@ -2208,36 +2231,34 @@ function setUploadError(
 
 
 /* =========================================================
-   DATABASE LOKAL
+   FIREBASE REALTIME DATABASE
+   Path data: users/{uid}/mysubject/{folders,files,notes,quizzes}
+   Semua operasi menulis per-item; tidak pernah menimpa seluruh database.
 ========================================================= */
 
 function basePath(){
-    if(!currentUser) throw new Error("User belum login.");
+    if(!currentUser || !currentUser.uid) throw new Error("User belum login ke Firebase.");
     return `users/${currentUser.uid}/mysubject`;
 }
 
 async function cloudGet(collection){
-    return readLocalCollection(collection);
+    if(!window.MySubjectFirebase) throw new Error("Firebase belum siap. Muat ulang halaman.");
+    return window.MySubjectFirebase.get(collection);
 }
 
 async function cloudAdd(collection,data){
-    const items = readLocalCollection(collection);
-    const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2,9)}`;
-    items.push({id,...data});
-    writeLocalCollection(collection,items);
-    return id;
+    if(!window.MySubjectFirebase) throw new Error("Firebase belum siap. Muat ulang halaman.");
+    return window.MySubjectFirebase.add(collection,data);
 }
 
 async function cloudUpdate(collection,id,data){
-    const items = readLocalCollection(collection);
-    const index = items.findIndex(item=>item.id===id);
-    if(index < 0) throw new Error("Data tidak ditemukan.");
-    items[index] = {...items[index],...data,id};
-    writeLocalCollection(collection,items);
+    if(!window.MySubjectFirebase) throw new Error("Firebase belum siap. Muat ulang halaman.");
+    return window.MySubjectFirebase.update(collection,id,data);
 }
 
 async function cloudDelete(collection,id){
-    writeLocalCollection(collection,readLocalCollection(collection).filter(item=>item.id!==id));
+    if(!window.MySubjectFirebase) throw new Error("Firebase belum siap. Muat ulang halaman.");
+    return window.MySubjectFirebase.remove(collection,id);
 }
 
 /* =========================================================
@@ -2413,7 +2434,7 @@ async function refresh(){
 
         updateCloudStatus(
             "loading",
-            "Memuat data dari perangkat..."
+            "Memuat data dari Firebase..."
         );
 
         const results =
@@ -2469,7 +2490,7 @@ async function refresh(){
 
         updateCloudStatus(
             "online",
-            "Tersimpan di perangkat"
+            "Tersinkron ke Firebase"
         );
 
     }catch(error){
@@ -2481,7 +2502,7 @@ async function refresh(){
 
         updateCloudStatus(
             "error",
-            "Penyimpanan lokal bermasalah"
+            "Firebase bermasalah"
         );
 
         showToast(
@@ -5091,27 +5112,30 @@ document.getElementById("fileForm").addEventListener("submit", async event=>{
     closeUploadModalBtn.disabled = true;
     uploadSubmitBtn.textContent = "Menyimpan...";
     showUploadProgress(file.name);
+    let savedCloudId = null;
     try{
-        setUploadProgress(15,"Menyimpan file ke penyimpanan perangkat...");
-        await saveLocalFile(id,file);
-        setUploadProgress(75,"Menyimpan informasi file...");
-        const storagePath = `local/${id}`;
-        const items = readLocalCollection("files");
-        items.push({
+        setUploadProgress(15,"Menyimpan informasi file ke Firebase...");
+        const metadata = {
             id, name:file.name, description, url:"",
-            storagePath, size:file.size, type:file.type,
+            storagePath:`local/${id}`, size:file.size, type:file.type,
             folderId:folderId||"", folderName:folder?.name||"",
-            category:currentCategory, createdAt:Date.now()
-        });
-        writeLocalCollection("files",items);
-        setUploadProgress(100,"File berhasil disimpan di perangkat.");
+            category:currentCategory, createdAt:Date.now(),
+            storageType:"local-only"
+        };
+        savedCloudId = await cloudAdd("files",metadata);
+        setUploadProgress(55,"Menyimpan file ke perangkat ini...");
+        await saveLocalFile(savedCloudId,file);
+        setUploadProgress(100,"Informasi file tersimpan di Firebase; isi file tersimpan di perangkat ini.");
         uploadProgressBox.classList.add("success");
-        showToast("File berhasil disimpan secara lokal.");
+        showToast("Informasi file tersinkron. Isi file masih tersimpan di perangkat ini.");
         await new Promise(resolve=>setTimeout(resolve,350));
         closeModal("fileModal");
         await refresh();
     }catch(error){
-        console.error("LOCAL FILE ERROR:",error);
+        if(savedCloudId){
+            try{ await cloudDelete("files",savedCloudId); }catch(cleanupError){ console.warn("Metadata file perlu dibersihkan dari Firebase:",cleanupError); }
+        }
+        console.error("FILE SAVE ERROR:",error);
         setUploadError("Gagal menyimpan file: "+(error.message||"Periksa ruang penyimpanan."));
         showToast("Gagal menyimpan file. Coba file yang lebih kecil.","error");
     }finally{
@@ -5611,19 +5635,18 @@ document
 
 
 /* =========================================================
-   LOGIN LOKAL
-   Catatan: login lokal bukan autentikasi aman untuk data rahasia.
+   LOGIN FIREBASE AUTHENTICATION
 ========================================================= */
 
-function enterApp(username){
-    currentUser = {uid: username.replace(/[^a-z0-9_-]/g,"_")};
+function enterApp(firebaseUser){
+    currentUser = firebaseUser;
     loginPage.style.display = "none";
     appPage.style.display = "block";
-    updateCloudStatus("online","Tersimpan di perangkat ini");
+    updateCloudStatus("loading","Memuat data Firebase...");
     refresh();
 }
 
-logoutBtn.addEventListener("click",()=>{
+function leaveApp(){
     currentUser = null;
     state.folders = [];
     state.files = [];
@@ -5634,9 +5657,24 @@ logoutBtn.addEventListener("click",()=>{
     loginPage.style.display = "flex";
     passwordInput.value = "";
     updateCloudStatus("","Belum login");
+}
+
+// Callback ini dipanggil oleh modul Firebase saat status autentikasi berubah.
+window.MySubjectSetUser = function(firebaseUser){
+    if(firebaseUser) enterApp(firebaseUser);
+    else leaveApp();
+};
+
+logoutBtn.addEventListener("click",async()=>{
+    try{
+        if(window.MySubjectFirebase) await window.MySubjectFirebase.logout();
+    }catch(error){
+        console.error(error);
+        showToast("Gagal keluar dari Firebase.","error");
+    }
 });
 
-loginForm.addEventListener("submit",event=>{
+loginForm.addEventListener("submit",async event=>{
     event.preventDefault();
     loginError.textContent = "";
     const username = usernameInput.value.trim().toLowerCase();
@@ -5649,12 +5687,18 @@ loginForm.addEventListener("submit",event=>{
         loginError.textContent = "Masukkan password.";
         return;
     }
+    if(!window.MySubjectFirebase){
+        loginError.textContent = "Firebase belum siap. Muat ulang halaman.";
+        return;
+    }
     loginBtn.disabled = true;
     loginBtn.textContent = "Login...";
     try{
-        enterApp(username);
+        await window.MySubjectFirebase.login(username,password,usernameMap[username]);
+        passwordInput.value = "";
     }catch(error){
-        loginError.textContent = error.message || "Gagal membuka aplikasi.";
+        console.error("Firebase login:",error);
+        loginError.textContent = error?.message || "Login Firebase gagal. Periksa username, password, dan akun Firebase Authentication.";
     }finally{
         loginBtn.disabled = false;
         loginBtn.textContent = "Login";
@@ -5670,6 +5714,133 @@ setCategory(
     "materi"
 );
 
+</script>
+
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getDatabase, ref, get as dbGet, set, update as dbUpdate, remove as dbRemove, push, runTransaction, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC5AyH9c_hjJPdyf6teTb6t8j2IiwWqg",
+  authDomain: "my-subject-c597d.firebaseapp.com",
+  databaseURL: "https://my-subject-c597d-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "my-subject-c597d",
+  storageBucket: "my-subject-c597d.firebasestorage.app",
+  messagingSenderId: "515963479359",
+  appId: "1:515963479359:web:95d59cd1ddbe9019769f8a",
+  measurementId: "G-Q8F8LY7080"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const database = getDatabase(app);
+const allowedCollections = new Set(["folders","files","notes","quizzes"]);
+
+function collectionRef(collection){
+  if(!allowedCollections.has(collection)) throw new Error("Jenis data tidak diizinkan.");
+  const user = auth.currentUser;
+  if(!user) throw new Error("Silakan login ke Firebase terlebih dahulu.");
+  return ref(database, `users/${user.uid}/mysubject/${collection}`);
+}
+function itemRef(collection,id){
+  if(!id || /[.#$\[\]\/]/.test(String(id))) throw new Error("ID data tidak valid.");
+  return ref(database, `users/${auth.currentUser.uid}/mysubject/${collection}/${id}`);
+}
+function niceAuthError(error){
+  const code = error?.code || "";
+  if(code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) return new Error("Username atau password Firebase salah.");
+  if(code.includes("operation-not-allowed")) return new Error("Login Email/Password belum diaktifkan di Firebase Console → Authentication → Sign-in method.");
+  if(code.includes("network-request-failed")) return new Error("Koneksi internet bermasalah. Coba lagi.");
+  if(code.includes("permission-denied") || code.includes("PERMISSION_DENIED")) return new Error("Akses database ditolak Rules Firebase. Periksa Rules tanpa mengubah data.");
+  return new Error(error?.message || "Terjadi kesalahan Firebase.");
+}
+
+window.MySubjectFirebase = {
+  async login(username,password,mappedEmail){
+    const cleaned = username.trim().toLowerCase().replace(/\s+/g,".");
+    const candidates = [...new Set([mappedEmail, `${cleaned}@mysubject.local`].filter(Boolean))];
+    let lastError;
+    for(const email of candidates){
+      try { return await signInWithEmailAndPassword(auth,email,password); }
+      catch(error){ lastError = error; }
+    }
+    throw niceAuthError(lastError);
+  },
+  async logout(){ await signOut(auth); },
+  async get(collection){
+    const snapshot = await dbGet(collectionRef(collection));
+    const value = snapshot.val();
+    if(!value || typeof value !== "object") return [];
+    if(Array.isArray(value)) return value.filter(Boolean).map((item,index)=>({...item,id:item?.id || String(index)}));
+    return Object.entries(value).filter(([,item])=>item && typeof item === "object").map(([key,item])=>({...item,id:item.id || key,_dbKey:key}));
+  },
+  async add(collection,data){
+    const listRef = collectionRef(collection);
+    if(data && data.id){
+      // If a caller supplies an ID, write only if that exact child is empty.
+      const target = ref(database, `users/${auth.currentUser.uid}/mysubject/${collection}/${data.id}`);
+      const result = await runTransaction(target,current=>current===null ? {...data} : undefined);
+      if(!result.committed) throw new Error("ID data sudah ada; tidak ada data yang ditimpa. Coba ulangi.");
+      return data.id;
+    }
+    const target = push(listRef);
+    const id = target.key;
+    await set(target,{...data,id});
+    return id;
+  },
+  async update(collection,id,data){
+    const current = (window.__mySubjectState?.[collection] || []).find(item=>item.id===id);
+    const key = current?._dbKey || id;
+    await dbUpdate(itemRef(collection,key),{...data,id});
+  },
+  async remove(collection,id){
+    const current = (window.__mySubjectState?.[collection] || []).find(item=>item.id===id);
+    const key = current?._dbKey || id;
+    await dbRemove(itemRef(collection,key));
+  }
+};
+
+// Expose only the current in-memory lists needed to resolve legacy Firebase child keys.
+window.__mySubjectState = window.__mySubjectState || null;
+let activeRealtimeUnsubs = [];
+function stopRealtimeListeners(){
+  activeRealtimeUnsubs.forEach(unsubscribe=>{ try{unsubscribe();}catch{} });
+  activeRealtimeUnsubs = [];
+}
+function startRealtimeListeners(){
+  stopRealtimeListeners();
+  for(const collection of allowedCollections){
+    const unsubscribe = onValue(collectionRef(collection),snapshot=>{
+      const value = snapshot.val();
+      let items = [];
+      if(value && typeof value === "object"){
+        if(Array.isArray(value)) items = value.filter(Boolean).map((item,index)=>({...item,id:item?.id || String(index)}));
+        else items = Object.entries(value).filter(([,item])=>item && typeof item === "object").map(([key,item])=>({...item,id:item.id || key,_dbKey:key}));
+      }
+      if(typeof window.MySubjectReceiveCloudData === "function") window.MySubjectReceiveCloudData(collection,items);
+    },error=>{
+      console.error("Firebase realtime listener:",error);
+      const label = document.getElementById("cloudStatus");
+      if(label) label.textContent = "Gagal sinkronisasi Firebase";
+      const dot = document.getElementById("statusDot");
+      if(dot) dot.className = "status-dot error";
+    });
+    activeRealtimeUnsubs.push(unsubscribe);
+  }
+}
+try {
+  onAuthStateChanged(auth,user=>{
+    stopRealtimeListeners();
+    if(typeof window.MySubjectSetUser === "function") window.MySubjectSetUser(user);
+    if(user) startRealtimeListeners();
+  });
+} catch(error) {
+  console.error("Firebase initialization error:",error);
+  const errorBox = document.getElementById("loginError");
+  if(errorBox) errorBox.textContent = "Firebase gagal dimulai. Periksa koneksi internet dan konfigurasi.";
+}
 </script>
 
 </body>
