@@ -1744,20 +1744,11 @@ function localDataKey(collection){
     return `mysubject_${currentUser.uid}_${collection}`;
 }
 function readLocalCollection(collection){
-    try {
-        const parsed = JSON.parse(localStorage.getItem(localDataKey(collection)) || "[]");
-        return Array.isArray(parsed) ? parsed : [];
-    } catch {
-        return [];
-    }
+    try { return JSON.parse(localStorage.getItem(localDataKey(collection)) || "[]"); }
+    catch { return []; }
 }
 function writeLocalCollection(collection, items){
-    if(!["folders","files","notes","quizzes"].includes(collection)) return;
-    try {
-        localStorage.setItem(localDataKey(collection), JSON.stringify(items));
-    } catch(error) {
-        console.warn("Cache lokal tidak dapat diperbarui:", error);
-    }
+    localStorage.setItem(localDataKey(collection), JSON.stringify(items));
 }
 
 const auth = null;
@@ -1819,12 +1810,6 @@ window.MySubjectReceiveCloudData = async function(collection, items){
     }
     state[collection] = items;
     if(currentUser){
-        // Cache per akun hanya salinan lokal; cache tidak pernah otomatis diunggah.
-        writeLocalCollection(collection, items.map(item => {
-            const copy = {...item};
-            delete copy.url; // Object URL hanya berlaku pada browser/perangkat ini.
-            return copy;
-        }));
         if(currentFolderId && !getFolder(currentFolderId)) currentFolderId = null;
         render();
         updateStats();
@@ -2485,13 +2470,6 @@ async function refresh(){
         state.quizzes =
             results[3];
 
-        ["folders","files","notes","quizzes"].forEach(collection => {
-            writeLocalCollection(collection, state[collection].map(item => {
-                const copy = {...item};
-                delete copy.url;
-                return copy;
-            }));
-        });
 
         if(
             currentFolderId &&
@@ -3268,10 +3246,9 @@ function render(){
 
                         <a
                             class="small-btn file-link"
+                            data-file-id="${escapeHTML(file.id)}"
                             href="${
-                                escapeHTML(
-                                    file.url
-                                )
+                                escapeHTML(file.url || "#")
                             }"
                             target="_blank"
                             rel="noopener"
@@ -3743,10 +3720,9 @@ function renderSearchResults(
 
                             <a
                                 class="small-btn file-link"
+                                data-file-id="${escapeHTML(file.id)}"
                                 href="${
-                                    escapeHTML(
-                                        file.url
-                                    )
+                                    escapeHTML(file.url || "#")
                                 }"
                                 target="_blank"
                                 rel="noopener"
@@ -4402,6 +4378,42 @@ async function deleteFolderTree(
 contentGrid.addEventListener(
     "click",
     async event=>{
+
+        const fileLink = event.target.closest(".file-link");
+        if(fileLink){
+            const selectedFile = state.files.find(file => file.id === fileLink.dataset.fileId);
+            if(selectedFile && selectedFile.storageType === "local-only" && !selectedFile.url){
+                event.preventDefault();
+                showToast("File lama masih tersimpan di perangkat asal. Upload ulang file dari perangkat asal agar bisa dibuka di HP dan laptop.", "error");
+                return;
+            }
+            if(selectedFile && selectedFile.storageType === "rtdb-chunks"){
+                event.preventDefault();
+                try{
+                    fileLink.textContent = "⏳ Memuat...";
+                    fileLink.style.pointerEvents = "none";
+                    const blob = await window.MySubjectFirebase.downloadFile(selectedFile.id);
+                    const objectUrl = URL.createObjectURL(blob);
+                    const opened = window.open(objectUrl, "_blank");
+                    if(!opened){
+                        const a = document.createElement("a");
+                        a.href = objectUrl;
+                        a.download = selectedFile.name || "file";
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                    }
+                    setTimeout(()=>URL.revokeObjectURL(objectUrl), 120000);
+                }catch(error){
+                    console.error("File cloud gagal dibuka:", error);
+                    showToast("File gagal dimuat dari cloud. Periksa koneksi dan Firebase Rules.", "error");
+                }finally{
+                    fileLink.textContent = "🔗 Buka";
+                    fileLink.style.pointerEvents = "";
+                }
+                return;
+            }
+        }
 
         const folderCard =
             event.target.closest(
@@ -5115,7 +5127,9 @@ document
 
 
 /* =========================================================
-   UPLOAD FILE KE INDEXEDDB (LOKAL, TANPA STORAGE BERBAYAR)
+   UPLOAD FILE KE FIREBASE REALTIME DATABASE (CHUNKED)
+   Tidak memakai Firebase Storage / Blaze. File baru disimpan
+   di cabang fileBlobs yang terpisah; data lama tidak disentuh.
 ========================================================= */
 
 document.getElementById("fileForm").addEventListener("submit", async event=>{
@@ -5124,6 +5138,10 @@ document.getElementById("fileForm").addEventListener("submit", async event=>{
     const file = input.files[0];
     if(!file){ showToast("Pilih file terlebih dahulu.","error"); return; }
     if(!currentUser){ showToast("Silakan login terlebih dahulu.","error"); return; }
+    if(file.size > 20 * 1024 * 1024){
+        showToast("Ukuran file maksimal 20 MB untuk metode penyimpanan gratis ini.","error");
+        return;
+    }
 
     const folderId = document.getElementById("fileFolder").value;
     const folder = getFolder(folderId);
@@ -5132,41 +5150,39 @@ document.getElementById("fileForm").addEventListener("submit", async event=>{
 
     uploadSubmitBtn.disabled = true;
     closeUploadModalBtn.disabled = true;
-    uploadSubmitBtn.textContent = "Menyimpan...";
+    uploadSubmitBtn.textContent = "Mengunggah...";
     showUploadProgress(file.name);
-    let savedCloudId = null;
     try{
-        setUploadProgress(15,"Menyimpan informasi file ke Firebase...");
+        setUploadProgress(3,"Mengunggah isi file ke Firebase Realtime Database...");
+        await window.MySubjectFirebase.uploadFile(id, file, (percent, message)=>{
+            setUploadProgress(Math.min(94, Math.max(3, percent * 0.9)), message);
+        });
+
+        setUploadProgress(95,"Menyimpan informasi file...");
         const metadata = {
             id, name:file.name, description, url:"",
-            storagePath:`local/${id}`, size:file.size, type:file.type,
+            storagePath:`fileBlobs/${id}`, size:file.size, type:file.type || "application/octet-stream",
             folderId:folderId||"", folderName:folder?.name||"",
             category:currentCategory, createdAt:Date.now(),
-            storageType:"local-only"
+            storageType:"rtdb-chunks"
         };
-        savedCloudId = await cloudAdd("files",metadata);
-        setUploadProgress(55,"Menyimpan file ke perangkat ini...");
-        await saveLocalFile(savedCloudId,file);
-        setUploadProgress(100,"Informasi file tersimpan di Firebase; isi file tersimpan di perangkat ini.");
+        await cloudAdd("files",metadata);
+        setUploadProgress(100,"File dan informasinya berhasil disimpan di cloud.");
         uploadProgressBox.classList.add("success");
-        showToast("Informasi file tersinkron. Isi file masih tersimpan di perangkat ini.");
+        showToast("Upload berhasil. File dapat dibuka di HP dan laptop.");
         await new Promise(resolve=>setTimeout(resolve,350));
         closeModal("fileModal");
         await refresh();
     }catch(error){
-        if(savedCloudId){
-            try{ await cloudDelete("files",savedCloudId); }catch(cleanupError){ console.warn("Metadata file perlu dibersihkan dari Firebase:",cleanupError); }
-        }
-        console.error("FILE SAVE ERROR:",error);
-        setUploadError("Gagal menyimpan file: "+(error.message||"Periksa ruang penyimpanan."));
-        showToast("Gagal menyimpan file. Coba file yang lebih kecil.","error");
+        console.error("FILE CLOUD UPLOAD ERROR:",error);
+        setUploadError("Upload gagal: "+(error.message||"Periksa koneksi atau Firebase Rules."));
+        showToast("Upload gagal. Data lama tidak dihapus atau diubah.","error");
     }finally{
         uploadSubmitBtn.disabled = false;
         closeUploadModalBtn.disabled = false;
         uploadSubmitBtn.textContent = "Upload";
     }
 });
-
 
 /* =========================================================
    QUIZ
@@ -5664,14 +5680,6 @@ function enterApp(firebaseUser){
     currentUser = firebaseUser;
     loginPage.style.display = "none";
     appPage.style.display = "block";
-    const schema = window.MySubjectFirebase?.getSchemaStatus?.();
-    if(schema && !schema.recognized){
-        updateCloudStatus("error","Jalur data lama belum terverifikasi");
-        showToast(schema.message || "Mode aman: penulisan database diblokir.","error");
-        state.folders = []; state.files = []; state.notes = []; state.quizzes = [];
-        render(); updateStats();
-        return;
-    }
     updateCloudStatus("loading","Memuat data Firebase...");
     refresh();
 }
@@ -5728,9 +5736,7 @@ loginForm.addEventListener("submit",async event=>{
         passwordInput.value = "";
     }catch(error){
         console.error("Firebase login:",error);
-        const message = error?.message || "Login Firebase gagal. Periksa username, password, dan akun Firebase Authentication.";
-        loginError.textContent = message;
-        if((error?.code || "").includes("api-key-not-valid") || message.includes("auth/api-key-not-valid")) updateCloudStatus("error","API key ditolak Firebase");
+        loginError.textContent = error?.message || "Login Firebase gagal. Periksa username, password, dan akun Firebase Authentication.";
     }finally{
         loginBtn.disabled = false;
         loginBtn.textContent = "Login";
@@ -5754,7 +5760,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getDatabase, ref, get as dbGet, set, update as dbUpdate, remove as dbRemove, push, runTransaction, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-/* Config dari Firebase Console proyek my-subject-c597d. */
 const firebaseConfig = {
   apiKey: "AIzaSyC5AyhUQ9c_hjJPdyf6teTb6t8j2IiwWqg",
   authDomain: "my-subject-c597d.firebaseapp.com",
@@ -5770,102 +5775,88 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
 const allowedCollections = new Set(["folders","files","notes","quizzes"]);
-let activeDataPath = null;
-let schemaReady = false;
-let schemaMessage = "";
-let activeRealtimeUnsubs = [];
 
-function userRoot(){
+function collectionRef(collection){
+  if(!allowedCollections.has(collection)) throw new Error("Jenis data tidak diizinkan.");
   const user = auth.currentUser;
   if(!user) throw new Error("Silakan login ke Firebase terlebih dahulu.");
-  return `users/${user.uid}`;
+  return ref(database, `users/${user.uid}/mysubject/${collection}`);
 }
-function collectionPath(collection){
-  if(!allowedCollections.has(collection)) throw new Error("Jenis data tidak diizinkan.");
-  if(!activeDataPath) throw new Error(schemaMessage || "Jalur data lama belum terverifikasi. Penulisan diblokir demi keamanan.");
-  return `${activeDataPath}/${collection}`;
-}
-function collectionRef(collection){ return ref(database, collectionPath(collection)); }
 function itemRef(collection,id){
   if(!id || /[.#$\[\]\/]/.test(String(id))) throw new Error("ID data tidak valid.");
-  return ref(database, `${collectionPath(collection)}/${id}`);
+  return ref(database, `users/${auth.currentUser.uid}/mysubject/${collection}/${id}`);
 }
-function authErrorMessage(error){
+function niceAuthError(error){
   const code = error?.code || "";
-  const message = error?.message || "";
-  if(code === "auth/api-key-not-valid" || message.includes("auth/api-key-not-valid")){
-    return new Error("Firebase menolak API key (auth/api-key-not-valid). HTML ini memakai key dari konfigurasi yang kamu berikan. Periksa Google Cloud → APIs & Services → Credentials: status key dan pembatasan Websites/API, termasuk Identity Toolkit API. Tidak ada data database yang diubah.");
-  }
-  if(code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) return new Error("Username/email atau password Firebase salah.");
+  if(code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) return new Error("Username atau password Firebase salah.");
   if(code.includes("operation-not-allowed")) return new Error("Login Email/Password belum diaktifkan di Firebase Console → Authentication → Sign-in method.");
-  if(code.includes("network-request-failed")) return new Error("Koneksi internet gagal menghubungi Firebase. Coba lagi.");
-  if(code.includes("permission-denied") || code.includes("PERMISSION_DENIED")) return new Error("Firebase Rules menolak akses. Jangan ubah Rules secara acak; periksa izin akun yang sedang login.");
-  return new Error(message || "Terjadi kesalahan Firebase.");
-}
-
-/*
-  Struktur lama yang ditemukan di source My Subject Firebase sebelumnya:
-  users/{uid}/mysubject/{folders,files,notes,quizzes}
-  Folder/subkelompok memakai parentId. Pemeriksaan di bawah hanya membaca data.
-*/
-async function inspectLegacySchema(){
-  schemaReady = false;
-  activeDataPath = null;
-  schemaMessage = "";
-
-  // Probe the known legacy branch first. This is read-only and avoids reading the entire user tree unnecessarily.
-  const knownPath = `${userRoot()}/mysubject`;
-  const knownSnapshot = await dbGet(ref(database, knownPath));
-  const mysubject = knownSnapshot.val();
-  if(mysubject && typeof mysubject === "object"){
-    const knownKeys = ["folders","files","notes","quizzes"];
-    const hasKnownCollection = knownKeys.some(key => Object.prototype.hasOwnProperty.call(mysubject,key));
-    const hasKnownData = knownKeys.some(key => {
-      const value = mysubject[key];
-      return value && typeof value === "object" && Object.keys(value).length > 0;
-    });
-    if(hasKnownCollection || hasKnownData){
-      activeDataPath = knownPath;
-      schemaReady = true;
-      schemaMessage = "Struktur lama users/{uid}/mysubject terdeteksi.";
-      return {recognized:true,path:activeDataPath,message:schemaMessage};
-    }
-  }
-
-  // Only if the known path is absent, inspect the user's root read-only to avoid creating a parallel tree.
-  const rootSnapshot = await dbGet(ref(database, userRoot()));
-  const rootValue = rootSnapshot.val();
-  if(rootValue && typeof rootValue === "object"){
-    const otherKeys = Object.keys(rootValue).filter(key => key !== "mysubject");
-    if(otherKeys.length){
-      schemaMessage = "Data ditemukan di akun ini, tetapi struktur mysubject/folders-files-notes-quizzes tidak terdeteksi. Mode aman aktif; tidak ada data yang ditulis. Perlu pemetaan jalur lama terlebih dahulu.";
-      return {recognized:false,path:null,message:schemaMessage};
-    }
-  }
-  schemaMessage = "Struktur My Subject lama belum ditemukan pada users/{uid}/mysubject. Mode aman aktif; aplikasi tidak akan membuat jalur baru atau menimpa data.";
-  return {recognized:false,path:null,message:schemaMessage};
+  if(code.includes("network-request-failed")) return new Error("Koneksi internet bermasalah. Coba lagi.");
+  if(code.includes("permission-denied") || code.includes("PERMISSION_DENIED")) return new Error("Akses database ditolak Rules Firebase. Periksa Rules tanpa mengubah data.");
+  return new Error(error?.message || "Terjadi kesalahan Firebase.");
 }
 
 window.MySubjectFirebase = {
   async login(username,password,mappedEmail){
-    try {
-      const email = String(mappedEmail || username || "").trim().toLowerCase();
-      if(!email || !email.includes("@")) throw new Error("Email akun Firebase untuk username ini belum dipetakan.");
-      return await signInWithEmailAndPassword(auth,email,password);
-    } catch(error) { throw authErrorMessage(error); }
+    const cleaned = username.trim().toLowerCase().replace(/\s+/g,".");
+    const candidates = [...new Set([mappedEmail, `${cleaned}@mysubject.local`].filter(Boolean))];
+    let lastError;
+    for(const email of candidates){
+      try { return await signInWithEmailAndPassword(auth,email,password); }
+      catch(error){ lastError = error; }
+    }
+    throw niceAuthError(lastError);
   },
   async logout(){ await signOut(auth); },
-  async inspectSchema(){
-    try { return await inspectLegacySchema(); }
-    catch(error){
-      schemaReady = false;
-      activeDataPath = null;
-      schemaMessage = authErrorMessage(error).message;
-      return {recognized:false,path:null,message:schemaMessage,error};
+  async uploadFile(id,file,onProgress=()=>{}){
+    const user = auth.currentUser;
+    if(!user) throw new Error("Silakan login ulang ke Firebase.");
+    if(!id || /[.#$\[\]\/]/.test(String(id))) throw new Error("ID file tidak valid.");
+    const root = `users/${user.uid}/mysubject/fileBlobs/${id}`;
+    const arrayBuffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = "";
+    const stride = 0x8000;
+    for(let offset=0; offset<bytes.length; offset+=stride){
+      binary += String.fromCharCode(...bytes.subarray(offset, Math.min(offset+stride,bytes.length)));
     }
+    const base64 = btoa(binary);
+    const chunkSize = 262144; // kelipatan 4 agar Base64 tetap valid per potongan
+    const chunks = [];
+    for(let i=0;i<base64.length;i+=chunkSize) chunks.push(base64.slice(i,i+chunkSize));
+    if(chunks.length === 0) chunks.push("");
+    for(let i=0;i<chunks.length;i++){
+      await set(ref(database, `${root}/chunks/${i}`), chunks[i]);
+      onProgress(Math.round(((i+1)/chunks.length)*100), `Mengunggah bagian ${i+1}/${chunks.length}...`);
+    }
+    await set(ref(database, `${root}/meta`), {
+      id, name:file.name, type:file.type || "application/octet-stream",
+      size:file.size, chunkCount:chunks.length, encoding:"base64", uploadedAt:Date.now()
+    });
+  },
+  async downloadFile(id){
+    const user = auth.currentUser;
+    if(!user) throw new Error("Silakan login ulang ke Firebase.");
+    const root = `users/${user.uid}/mysubject/fileBlobs/${id}`;
+    const metaSnap = await dbGet(ref(database, `${root}/meta`));
+    const meta = metaSnap.val();
+    if(!meta || !Number.isInteger(meta.chunkCount)) throw new Error("Isi file tidak ditemukan di cloud atau upload belum lengkap.");
+    const parts = [];
+    for(let i=0;i<meta.chunkCount;i++){
+      const snap = await dbGet(ref(database, `${root}/chunks/${i}`));
+      const chunk = snap.val();
+      if(typeof chunk !== "string") throw new Error(`Bagian file ${i+1} tidak ditemukan.`);
+      parts.push(chunk);
+    }
+    const binary = atob(parts.join(""));
+    const bytes = new Uint8Array(binary.length);
+    const stride = 0x8000;
+    for(let offset=0; offset<binary.length; offset+=stride){
+      const end = Math.min(offset+stride,binary.length);
+      for(let i=offset;i<end;i++) bytes[i] = binary.charCodeAt(i);
+    }
+    return new Blob([bytes], {type:meta.type || "application/octet-stream"});
   },
   async get(collection){
-    if(!activeDataPath) return [];
     const snapshot = await dbGet(collectionRef(collection));
     const value = snapshot.val();
     if(!value || typeof value !== "object") return [];
@@ -5873,10 +5864,10 @@ window.MySubjectFirebase = {
     return Object.entries(value).filter(([,item])=>item && typeof item === "object").map(([key,item])=>({...item,id:item.id || key,_dbKey:key}));
   },
   async add(collection,data){
-    if(!schemaReady || !activeDataPath) throw new Error(schemaMessage || "Jalur data belum terverifikasi; penulisan diblokir.");
     const listRef = collectionRef(collection);
     if(data && data.id){
-      const target = ref(database, `${collectionPath(collection)}/${data.id}`);
+      // If a caller supplies an ID, write only if that exact child is empty.
+      const target = ref(database, `users/${auth.currentUser.uid}/mysubject/${collection}/${data.id}`);
       const result = await runTransaction(target,current=>current===null ? {...data} : undefined);
       if(!result.committed) throw new Error("ID data sudah ada; tidak ada data yang ditimpa. Coba ulangi.");
       return data.id;
@@ -5887,58 +5878,56 @@ window.MySubjectFirebase = {
     return id;
   },
   async update(collection,id,data){
-    if(!schemaReady || !activeDataPath) throw new Error(schemaMessage || "Jalur data belum terverifikasi; penulisan diblokir.");
     const current = (window.__mySubjectState?.[collection] || []).find(item=>item.id===id);
-    if(!current) throw new Error("Data tidak ditemukan pada daftar yang dimuat; perubahan dibatalkan demi keamanan.");
-    const key = current._dbKey || id;
+    const key = current?._dbKey || id;
     await dbUpdate(itemRef(collection,key),{...data,id});
   },
   async remove(collection,id){
-    if(!schemaReady || !activeDataPath) throw new Error(schemaMessage || "Jalur data belum terverifikasi; penulisan diblokir.");
     const current = (window.__mySubjectState?.[collection] || []).find(item=>item.id===id);
-    if(!current) throw new Error("Data tidak ditemukan pada daftar yang dimuat; penghapusan dibatalkan demi keamanan.");
-    const key = current._dbKey || id;
+    const key = current?._dbKey || id;
     await dbRemove(itemRef(collection,key));
-  },
-  getSchemaStatus(){ return {recognized:schemaReady,path:activeDataPath,message:schemaMessage}; }
+  }
 };
 
-function stopRealtimeListeners(){ activeRealtimeUnsubs.forEach(unsubscribe=>{ try{unsubscribe();}catch{} }); activeRealtimeUnsubs=[]; }
+// Expose only the current in-memory lists needed to resolve legacy Firebase child keys.
+window.__mySubjectState = window.__mySubjectState || null;
+let activeRealtimeUnsubs = [];
+function stopRealtimeListeners(){
+  activeRealtimeUnsubs.forEach(unsubscribe=>{ try{unsubscribe();}catch{} });
+  activeRealtimeUnsubs = [];
+}
 function startRealtimeListeners(){
   stopRealtimeListeners();
-  if(!schemaReady || !activeDataPath) return;
   for(const collection of allowedCollections){
     const unsubscribe = onValue(collectionRef(collection),snapshot=>{
       const value = snapshot.val();
       let items = [];
       if(value && typeof value === "object"){
-        if(Array.isArray(value)) items=value.filter(Boolean).map((item,index)=>({...item,id:item?.id || String(index)}));
-        else items=Object.entries(value).filter(([,item])=>item && typeof item === "object").map(([key,item])=>({...item,id:item.id || key,_dbKey:key}));
+        if(Array.isArray(value)) items = value.filter(Boolean).map((item,index)=>({...item,id:item?.id || String(index)}));
+        else items = Object.entries(value).filter(([,item])=>item && typeof item === "object").map(([key,item])=>({...item,id:item.id || key,_dbKey:key}));
       }
       if(typeof window.MySubjectReceiveCloudData === "function") window.MySubjectReceiveCloudData(collection,items);
     },error=>{
       console.error("Firebase realtime listener:",error);
-      const label=document.getElementById("cloudStatus"); if(label) label.textContent="Gagal sinkronisasi Firebase";
-      const dot=document.getElementById("statusDot"); if(dot) dot.className="status-dot error";
+      const label = document.getElementById("cloudStatus");
+      if(label) label.textContent = "Gagal sinkronisasi Firebase";
+      const dot = document.getElementById("statusDot");
+      if(dot) dot.className = "status-dot error";
     });
     activeRealtimeUnsubs.push(unsubscribe);
   }
 }
-
-onAuthStateChanged(auth,async user=>{
-  stopRealtimeListeners();
-  if(user){
-    const status = await window.MySubjectFirebase.inspectSchema();
-    if(!status.recognized){
-      console.warn("My Subject schema check:",status.message);
-      const errorBox=document.getElementById("loginError"); if(errorBox) errorBox.textContent=status.message;
-    }
+try {
+  onAuthStateChanged(auth,user=>{
+    stopRealtimeListeners();
     if(typeof window.MySubjectSetUser === "function") window.MySubjectSetUser(user);
-    if(status.recognized) startRealtimeListeners();
-  } else if(typeof window.MySubjectSetUser === "function") {
-    window.MySubjectSetUser(null);
-  }
-});
+    if(user) startRealtimeListeners();
+  });
+} catch(error) {
+  console.error("Firebase initialization error:",error);
+  const errorBox = document.getElementById("loginError");
+  if(errorBox) errorBox.textContent = "Firebase gagal dimulai. Periksa koneksi internet dan konfigurasi.";
+}
 </script>
 
 </body>
