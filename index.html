@@ -1744,11 +1744,20 @@ function localDataKey(collection){
     return `mysubject_${currentUser.uid}_${collection}`;
 }
 function readLocalCollection(collection){
-    try { return JSON.parse(localStorage.getItem(localDataKey(collection)) || "[]"); }
-    catch { return []; }
+    try {
+        const parsed = JSON.parse(localStorage.getItem(localDataKey(collection)) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
 }
 function writeLocalCollection(collection, items){
-    localStorage.setItem(localDataKey(collection), JSON.stringify(items));
+    if(!["folders","files","notes","quizzes"].includes(collection)) return;
+    try {
+        localStorage.setItem(localDataKey(collection), JSON.stringify(items));
+    } catch(error) {
+        console.warn("Cache lokal tidak dapat diperbarui:", error);
+    }
 }
 
 const auth = null;
@@ -1810,6 +1819,12 @@ window.MySubjectReceiveCloudData = async function(collection, items){
     }
     state[collection] = items;
     if(currentUser){
+        // Cache per akun hanya salinan lokal; cache tidak pernah otomatis diunggah.
+        writeLocalCollection(collection, items.map(item => {
+            const copy = {...item};
+            delete copy.url; // Object URL hanya berlaku pada browser/perangkat ini.
+            return copy;
+        }));
         if(currentFolderId && !getFolder(currentFolderId)) currentFolderId = null;
         render();
         updateStats();
@@ -2470,6 +2485,13 @@ async function refresh(){
         state.quizzes =
             results[3];
 
+        ["folders","files","notes","quizzes"].forEach(collection => {
+            writeLocalCollection(collection, state[collection].map(item => {
+                const copy = {...item};
+                delete copy.url;
+                return copy;
+            }));
+        });
 
         if(
             currentFolderId &&
@@ -5642,6 +5664,14 @@ function enterApp(firebaseUser){
     currentUser = firebaseUser;
     loginPage.style.display = "none";
     appPage.style.display = "block";
+    const schema = window.MySubjectFirebase?.getSchemaStatus?.();
+    if(schema && !schema.recognized){
+        updateCloudStatus("error","Jalur data lama belum terverifikasi");
+        showToast(schema.message || "Mode aman: penulisan database diblokir.","error");
+        state.folders = []; state.files = []; state.notes = []; state.quizzes = [];
+        render(); updateStats();
+        return;
+    }
     updateCloudStatus("loading","Memuat data Firebase...");
     refresh();
 }
@@ -5698,7 +5728,9 @@ loginForm.addEventListener("submit",async event=>{
         passwordInput.value = "";
     }catch(error){
         console.error("Firebase login:",error);
-        loginError.textContent = error?.message || "Login Firebase gagal. Periksa username, password, dan akun Firebase Authentication.";
+        const message = error?.message || "Login Firebase gagal. Periksa username, password, dan akun Firebase Authentication.";
+        loginError.textContent = message;
+        if((error?.code || "").includes("api-key-not-valid") || message.includes("auth/api-key-not-valid")) updateCloudStatus("error","API key ditolak Firebase");
     }finally{
         loginBtn.disabled = false;
         loginBtn.textContent = "Login";
@@ -5722,6 +5754,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getDatabase, ref, get as dbGet, set, update as dbUpdate, remove as dbRemove, push, runTransaction, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
+/* Config dari Firebase Console proyek my-subject-c597d. */
 const firebaseConfig = {
   apiKey: "AIzaSyC5AyhUQ9c_hjJPdyf6teTb6t8j2IiwWqg",
   authDomain: "my-subject-c597d.firebaseapp.com",
@@ -5737,39 +5770,102 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
 const allowedCollections = new Set(["folders","files","notes","quizzes"]);
+let activeDataPath = null;
+let schemaReady = false;
+let schemaMessage = "";
+let activeRealtimeUnsubs = [];
 
-function collectionRef(collection){
-  if(!allowedCollections.has(collection)) throw new Error("Jenis data tidak diizinkan.");
+function userRoot(){
   const user = auth.currentUser;
   if(!user) throw new Error("Silakan login ke Firebase terlebih dahulu.");
-  return ref(database, `users/${user.uid}/mysubject/${collection}`);
+  return `users/${user.uid}`;
 }
+function collectionPath(collection){
+  if(!allowedCollections.has(collection)) throw new Error("Jenis data tidak diizinkan.");
+  if(!activeDataPath) throw new Error(schemaMessage || "Jalur data lama belum terverifikasi. Penulisan diblokir demi keamanan.");
+  return `${activeDataPath}/${collection}`;
+}
+function collectionRef(collection){ return ref(database, collectionPath(collection)); }
 function itemRef(collection,id){
   if(!id || /[.#$\[\]\/]/.test(String(id))) throw new Error("ID data tidak valid.");
-  return ref(database, `users/${auth.currentUser.uid}/mysubject/${collection}/${id}`);
+  return ref(database, `${collectionPath(collection)}/${id}`);
 }
-function niceAuthError(error){
+function authErrorMessage(error){
   const code = error?.code || "";
-  if(code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) return new Error("Username atau password Firebase salah.");
+  const message = error?.message || "";
+  if(code === "auth/api-key-not-valid" || message.includes("auth/api-key-not-valid")){
+    return new Error("Firebase menolak API key (auth/api-key-not-valid). HTML ini memakai key dari konfigurasi yang kamu berikan. Periksa Google Cloud → APIs & Services → Credentials: status key dan pembatasan Websites/API, termasuk Identity Toolkit API. Tidak ada data database yang diubah.");
+  }
+  if(code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) return new Error("Username/email atau password Firebase salah.");
   if(code.includes("operation-not-allowed")) return new Error("Login Email/Password belum diaktifkan di Firebase Console → Authentication → Sign-in method.");
-  if(code.includes("network-request-failed")) return new Error("Koneksi internet bermasalah. Coba lagi.");
-  if(code.includes("permission-denied") || code.includes("PERMISSION_DENIED")) return new Error("Akses database ditolak Rules Firebase. Periksa Rules tanpa mengubah data.");
-  return new Error(error?.message || "Terjadi kesalahan Firebase.");
+  if(code.includes("network-request-failed")) return new Error("Koneksi internet gagal menghubungi Firebase. Coba lagi.");
+  if(code.includes("permission-denied") || code.includes("PERMISSION_DENIED")) return new Error("Firebase Rules menolak akses. Jangan ubah Rules secara acak; periksa izin akun yang sedang login.");
+  return new Error(message || "Terjadi kesalahan Firebase.");
+}
+
+/*
+  Struktur lama yang ditemukan di source My Subject Firebase sebelumnya:
+  users/{uid}/mysubject/{folders,files,notes,quizzes}
+  Folder/subkelompok memakai parentId. Pemeriksaan di bawah hanya membaca data.
+*/
+async function inspectLegacySchema(){
+  schemaReady = false;
+  activeDataPath = null;
+  schemaMessage = "";
+
+  // Probe the known legacy branch first. This is read-only and avoids reading the entire user tree unnecessarily.
+  const knownPath = `${userRoot()}/mysubject`;
+  const knownSnapshot = await dbGet(ref(database, knownPath));
+  const mysubject = knownSnapshot.val();
+  if(mysubject && typeof mysubject === "object"){
+    const knownKeys = ["folders","files","notes","quizzes"];
+    const hasKnownCollection = knownKeys.some(key => Object.prototype.hasOwnProperty.call(mysubject,key));
+    const hasKnownData = knownKeys.some(key => {
+      const value = mysubject[key];
+      return value && typeof value === "object" && Object.keys(value).length > 0;
+    });
+    if(hasKnownCollection || hasKnownData){
+      activeDataPath = knownPath;
+      schemaReady = true;
+      schemaMessage = "Struktur lama users/{uid}/mysubject terdeteksi.";
+      return {recognized:true,path:activeDataPath,message:schemaMessage};
+    }
+  }
+
+  // Only if the known path is absent, inspect the user's root read-only to avoid creating a parallel tree.
+  const rootSnapshot = await dbGet(ref(database, userRoot()));
+  const rootValue = rootSnapshot.val();
+  if(rootValue && typeof rootValue === "object"){
+    const otherKeys = Object.keys(rootValue).filter(key => key !== "mysubject");
+    if(otherKeys.length){
+      schemaMessage = "Data ditemukan di akun ini, tetapi struktur mysubject/folders-files-notes-quizzes tidak terdeteksi. Mode aman aktif; tidak ada data yang ditulis. Perlu pemetaan jalur lama terlebih dahulu.";
+      return {recognized:false,path:null,message:schemaMessage};
+    }
+  }
+  schemaMessage = "Struktur My Subject lama belum ditemukan pada users/{uid}/mysubject. Mode aman aktif; aplikasi tidak akan membuat jalur baru atau menimpa data.";
+  return {recognized:false,path:null,message:schemaMessage};
 }
 
 window.MySubjectFirebase = {
   async login(username,password,mappedEmail){
-    const cleaned = username.trim().toLowerCase().replace(/\s+/g,".");
-    const candidates = [...new Set([mappedEmail, `${cleaned}@mysubject.local`].filter(Boolean))];
-    let lastError;
-    for(const email of candidates){
-      try { return await signInWithEmailAndPassword(auth,email,password); }
-      catch(error){ lastError = error; }
-    }
-    throw niceAuthError(lastError);
+    try {
+      const email = String(mappedEmail || username || "").trim().toLowerCase();
+      if(!email || !email.includes("@")) throw new Error("Email akun Firebase untuk username ini belum dipetakan.");
+      return await signInWithEmailAndPassword(auth,email,password);
+    } catch(error) { throw authErrorMessage(error); }
   },
   async logout(){ await signOut(auth); },
+  async inspectSchema(){
+    try { return await inspectLegacySchema(); }
+    catch(error){
+      schemaReady = false;
+      activeDataPath = null;
+      schemaMessage = authErrorMessage(error).message;
+      return {recognized:false,path:null,message:schemaMessage,error};
+    }
+  },
   async get(collection){
+    if(!activeDataPath) return [];
     const snapshot = await dbGet(collectionRef(collection));
     const value = snapshot.val();
     if(!value || typeof value !== "object") return [];
@@ -5777,10 +5873,10 @@ window.MySubjectFirebase = {
     return Object.entries(value).filter(([,item])=>item && typeof item === "object").map(([key,item])=>({...item,id:item.id || key,_dbKey:key}));
   },
   async add(collection,data){
+    if(!schemaReady || !activeDataPath) throw new Error(schemaMessage || "Jalur data belum terverifikasi; penulisan diblokir.");
     const listRef = collectionRef(collection);
     if(data && data.id){
-      // If a caller supplies an ID, write only if that exact child is empty.
-      const target = ref(database, `users/${auth.currentUser.uid}/mysubject/${collection}/${data.id}`);
+      const target = ref(database, `${collectionPath(collection)}/${data.id}`);
       const result = await runTransaction(target,current=>current===null ? {...data} : undefined);
       if(!result.committed) throw new Error("ID data sudah ada; tidak ada data yang ditimpa. Coba ulangi.");
       return data.id;
@@ -5791,56 +5887,58 @@ window.MySubjectFirebase = {
     return id;
   },
   async update(collection,id,data){
+    if(!schemaReady || !activeDataPath) throw new Error(schemaMessage || "Jalur data belum terverifikasi; penulisan diblokir.");
     const current = (window.__mySubjectState?.[collection] || []).find(item=>item.id===id);
-    const key = current?._dbKey || id;
+    if(!current) throw new Error("Data tidak ditemukan pada daftar yang dimuat; perubahan dibatalkan demi keamanan.");
+    const key = current._dbKey || id;
     await dbUpdate(itemRef(collection,key),{...data,id});
   },
   async remove(collection,id){
+    if(!schemaReady || !activeDataPath) throw new Error(schemaMessage || "Jalur data belum terverifikasi; penulisan diblokir.");
     const current = (window.__mySubjectState?.[collection] || []).find(item=>item.id===id);
-    const key = current?._dbKey || id;
+    if(!current) throw new Error("Data tidak ditemukan pada daftar yang dimuat; penghapusan dibatalkan demi keamanan.");
+    const key = current._dbKey || id;
     await dbRemove(itemRef(collection,key));
-  }
+  },
+  getSchemaStatus(){ return {recognized:schemaReady,path:activeDataPath,message:schemaMessage}; }
 };
 
-// Expose only the current in-memory lists needed to resolve legacy Firebase child keys.
-window.__mySubjectState = window.__mySubjectState || null;
-let activeRealtimeUnsubs = [];
-function stopRealtimeListeners(){
-  activeRealtimeUnsubs.forEach(unsubscribe=>{ try{unsubscribe();}catch{} });
-  activeRealtimeUnsubs = [];
-}
+function stopRealtimeListeners(){ activeRealtimeUnsubs.forEach(unsubscribe=>{ try{unsubscribe();}catch{} }); activeRealtimeUnsubs=[]; }
 function startRealtimeListeners(){
   stopRealtimeListeners();
+  if(!schemaReady || !activeDataPath) return;
   for(const collection of allowedCollections){
     const unsubscribe = onValue(collectionRef(collection),snapshot=>{
       const value = snapshot.val();
       let items = [];
       if(value && typeof value === "object"){
-        if(Array.isArray(value)) items = value.filter(Boolean).map((item,index)=>({...item,id:item?.id || String(index)}));
-        else items = Object.entries(value).filter(([,item])=>item && typeof item === "object").map(([key,item])=>({...item,id:item.id || key,_dbKey:key}));
+        if(Array.isArray(value)) items=value.filter(Boolean).map((item,index)=>({...item,id:item?.id || String(index)}));
+        else items=Object.entries(value).filter(([,item])=>item && typeof item === "object").map(([key,item])=>({...item,id:item.id || key,_dbKey:key}));
       }
       if(typeof window.MySubjectReceiveCloudData === "function") window.MySubjectReceiveCloudData(collection,items);
     },error=>{
       console.error("Firebase realtime listener:",error);
-      const label = document.getElementById("cloudStatus");
-      if(label) label.textContent = "Gagal sinkronisasi Firebase";
-      const dot = document.getElementById("statusDot");
-      if(dot) dot.className = "status-dot error";
+      const label=document.getElementById("cloudStatus"); if(label) label.textContent="Gagal sinkronisasi Firebase";
+      const dot=document.getElementById("statusDot"); if(dot) dot.className="status-dot error";
     });
     activeRealtimeUnsubs.push(unsubscribe);
   }
 }
-try {
-  onAuthStateChanged(auth,user=>{
-    stopRealtimeListeners();
+
+onAuthStateChanged(auth,async user=>{
+  stopRealtimeListeners();
+  if(user){
+    const status = await window.MySubjectFirebase.inspectSchema();
+    if(!status.recognized){
+      console.warn("My Subject schema check:",status.message);
+      const errorBox=document.getElementById("loginError"); if(errorBox) errorBox.textContent=status.message;
+    }
     if(typeof window.MySubjectSetUser === "function") window.MySubjectSetUser(user);
-    if(user) startRealtimeListeners();
-  });
-} catch(error) {
-  console.error("Firebase initialization error:",error);
-  const errorBox = document.getElementById("loginError");
-  if(errorBox) errorBox.textContent = "Firebase gagal dimulai. Periksa koneksi internet dan konfigurasi.";
-}
+    if(status.recognized) startRealtimeListeners();
+  } else if(typeof window.MySubjectSetUser === "function") {
+    window.MySubjectSetUser(null);
+  }
+});
 </script>
 
 </body>
