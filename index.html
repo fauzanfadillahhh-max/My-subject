@@ -936,7 +936,7 @@ button{
             ></span>
 
             <span id="cloudStatus">
-                Menunggu Firebase...
+                Penyimpanan lokal
             </span>
 
         </div>
@@ -1684,90 +1684,82 @@ Periksa Jawaban
 ></div>
 
 
-<script type="module">
+<script>
 
 /* =========================================================
-   FIREBASE IMPORT
+   PENYIMPANAN LOKAL: localStorage + IndexedDB
+   Tidak membutuhkan Firebase atau paket berbayar.
 ========================================================= */
 
-import {
-    initializeApp
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+const DB_NAME = "MySubjectLocalFiles";
+const DB_VERSION = 1;
+const FILE_STORE = "files";
 
-import {
-    getAuth,
-    signInWithEmailAndPassword,
-    onAuthStateChanged,
-    signOut
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+function openLocalDB(){
+    return new Promise((resolve,reject)=>{
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = () => {
+            const db = request.result;
+            if(!db.objectStoreNames.contains(FILE_STORE)){
+                db.createObjectStore(FILE_STORE, {keyPath:"id"});
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
 
-import {
-    getDatabase,
-    ref,
-    get,
-    set,
-    update,
-    remove,
-    push
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+async function saveLocalFile(id, file){
+    const db = await openLocalDB();
+    return new Promise((resolve,reject)=>{
+        const tx = db.transaction(FILE_STORE,"readwrite");
+        tx.objectStore(FILE_STORE).put({id, blob:file, name:file.name, type:file.type});
+        tx.oncomplete = ()=>{db.close();resolve();};
+        tx.onerror = ()=>{db.close();reject(tx.error);};
+    });
+}
 
-import {
-    getStorage,
-    ref as storageRef,
-    uploadBytesResumable,
-    getDownloadURL,
-    deleteObject
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+async function getLocalFile(id){
+    const db = await openLocalDB();
+    return new Promise((resolve,reject)=>{
+        const tx = db.transaction(FILE_STORE,"readonly");
+        const req = tx.objectStore(FILE_STORE).get(id);
+        req.onsuccess = ()=>{const result=req.result;db.close();resolve(result||null);};
+        req.onerror = ()=>{db.close();reject(req.error);};
+    });
+}
 
+async function deleteLocalFile(id){
+    const db = await openLocalDB();
+    return new Promise((resolve,reject)=>{
+        const tx = db.transaction(FILE_STORE,"readwrite");
+        tx.objectStore(FILE_STORE).delete(id);
+        tx.oncomplete = ()=>{db.close();resolve();};
+        tx.onerror = ()=>{db.close();reject(tx.error);};
+    });
+}
 
-/* =========================================================
-   FIREBASE CONFIG
-========================================================= */
+function localDataKey(collection){
+    if(!currentUser) throw new Error("User belum login.");
+    return `mysubject_${currentUser.uid}_${collection}`;
+}
+function readLocalCollection(collection){
+    try { return JSON.parse(localStorage.getItem(localDataKey(collection)) || "[]"); }
+    catch { return []; }
+}
+function writeLocalCollection(collection, items){
+    localStorage.setItem(localDataKey(collection), JSON.stringify(items));
+}
 
-const firebaseConfig = {
-
-    apiKey:
-        "AIzaSyC5AyhUQ9c_hjJPdyf6teTb6t8j2IiwWqg",
-
-    authDomain:
-        "my-subject-c597d.firebaseapp.com",
-
-    databaseURL:
-        "https://my-subject-c597d-default-rtdb.asia-southeast1.firebasedatabase.app",
-
-    projectId:
-        "my-subject-c597d",
-
-    storageBucket:
-        "my-subject-c597d.firebasestorage.app",
-
-    messagingSenderId:
-        "515963479359",
-
-    appId:
-        "1:515963479359:web:95d59cd1ddbe9019769f8a",
-
-    measurementId:
-        "G-Q8F8LY7080"
-};
-
-
-/* =========================================================
-   INITIALIZE
-========================================================= */
-
-const app =
-    initializeApp(firebaseConfig);
-
-const auth =
-    getAuth(app);
-
-const db =
-    getDatabase(app);
-
-const storage =
-    getStorage(app);
-
+const auth = null;
+const db = null;
+const storage = null;
+const ref = (_db,path) => path;
+const storageRef = (_storage,path) => path;
+async function deleteObject(path){
+    const id = String(path).split("/").pop();
+    await deleteLocalFile(id);
+}
 
 /* =========================================================
    STATE
@@ -2216,128 +2208,37 @@ function setUploadError(
 
 
 /* =========================================================
-   DATABASE PATH
+   DATABASE LOKAL
 ========================================================= */
 
 function basePath(){
-
-    if(!currentUser)
-        throw new Error(
-            "User belum login."
-        );
-
-    return (
-        "users/" +
-        currentUser.uid +
-        "/mysubject"
-    );
-
+    if(!currentUser) throw new Error("User belum login.");
+    return `users/${currentUser.uid}/mysubject`;
 }
 
-
-/* =========================================================
-   DATABASE READ
-========================================================= */
-
-async function cloudGet(
-    collection
-){
-
-    const path =
-        `${basePath()}/${collection}`;
-
-    const snapshot =
-        await get(
-            ref(db,path)
-        );
-
-    if(!snapshot.exists())
-        return [];
-
-    const value =
-        snapshot.val();
-
-    if(
-        typeof value !== "object" ||
-        value === null
-    ){
-
-        return [];
-
-    }
-
-    return Object.entries(value)
-        .map(
-            ([id,data])=>({
-
-                id,
-
-                ...(data || {})
-
-            })
-        );
-
+async function cloudGet(collection){
+    return readLocalCollection(collection);
 }
 
-
-/* =========================================================
-   DATABASE WRITE
-========================================================= */
-
-async function cloudAdd(
-    collection,
-    data
-){
-
-    const newRef =
-        push(
-            ref(
-                db,
-                `${basePath()}/${collection}`
-            )
-        );
-
-    await set(
-        newRef,
-        data
-    );
-
-    return newRef.key;
-
+async function cloudAdd(collection,data){
+    const items = readLocalCollection(collection);
+    const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2,9)}`;
+    items.push({id,...data});
+    writeLocalCollection(collection,items);
+    return id;
 }
 
-
-async function cloudUpdate(
-    collection,
-    id,
-    data
-){
-
-    await update(
-        ref(
-            db,
-            `${basePath()}/${collection}/${id}`
-        ),
-        data
-    );
-
+async function cloudUpdate(collection,id,data){
+    const items = readLocalCollection(collection);
+    const index = items.findIndex(item=>item.id===id);
+    if(index < 0) throw new Error("Data tidak ditemukan.");
+    items[index] = {...items[index],...data,id};
+    writeLocalCollection(collection,items);
 }
 
-
-async function cloudDelete(
-    collection,
-    id
-){
-
-    await remove(
-        ref(
-            db,
-            `${basePath()}/${collection}/${id}`
-        )
-    );
-
+async function cloudDelete(collection,id){
+    writeLocalCollection(collection,readLocalCollection(collection).filter(item=>item.id!==id));
 }
-
 
 /* =========================================================
    FIND FOLDER
@@ -2512,7 +2413,7 @@ async function refresh(){
 
         updateCloudStatus(
             "loading",
-            "Mengambil data dari Firebase..."
+            "Memuat data dari perangkat..."
         );
 
         const results =
@@ -2532,8 +2433,15 @@ async function refresh(){
         state.folders =
             results[0];
 
-        state.files =
-            results[1];
+        state.files = await Promise.all(results[1].map(async file=>{
+            try {
+                const saved = await getLocalFile(file.id);
+                if(saved && saved.blob) {
+                    file.url = URL.createObjectURL(saved.blob);
+                }
+            } catch(error) { console.warn("File lokal tidak dapat dibaca", error); }
+            return file;
+        }));
 
         state.notes =
             results[2];
@@ -2561,7 +2469,7 @@ async function refresh(){
 
         updateCloudStatus(
             "online",
-            "Firebase tersinkron"
+            "Tersimpan di perangkat"
         );
 
     }catch(error){
@@ -2573,11 +2481,11 @@ async function refresh(){
 
         updateCloudStatus(
             "error",
-            "Firebase gagal diakses"
+            "Penyimpanan lokal bermasalah"
         );
 
         showToast(
-            "Firebase Error: " +
+            "Penyimpanan Error: " +
             firebaseError(error),
             "error"
         );
@@ -5164,314 +5072,54 @@ document
 
 
 /* =========================================================
-   FILE UPLOAD WITH REAL PROGRESS
+   UPLOAD FILE KE INDEXEDDB (LOKAL, TANPA STORAGE BERBAYAR)
 ========================================================= */
 
-document
-    .getElementById(
-        "fileForm"
-    )
-    .addEventListener(
-        "submit",
-        async event=>{
-
-            event.preventDefault();
-
-
-            const input =
-                document.getElementById(
-                    "fileInput"
-                );
-
-
-            const file =
-                input.files[0];
-
-
-            if(!file){
-
-                showToast(
-                    "Pilih file terlebih dahulu.",
-                    "error"
-                );
-
-                return;
-
-            }
-
-
-            if(!currentUser){
-
-                showToast(
-                    "User belum login.",
-                    "error"
-                );
-
-                return;
-
-            }
-
-
-            const folderId =
-                document.getElementById(
-                    "fileFolder"
-                ).value;
-
-
-            const folder =
-                getFolder(
-                    folderId
-                );
-
-
-            const description =
-                document.getElementById(
-                    "fileDescription"
-                )
-                .value
-                .trim();
-
-
-            /*
-                KUNCI TOMBOL SELAMA UPLOAD
-            */
-
-            uploadSubmitBtn.disabled =
-                true;
-
-            closeUploadModalBtn.disabled =
-                true;
-
-            uploadSubmitBtn.textContent =
-                "Mengupload...";
-
-
-            showUploadProgress(
-                file.name
-            );
-
-
-            try{
-
-                const safeName =
-                    file.name.replace(
-                        /[^a-zA-Z0-9._-]/g,
-                        "_"
-                    );
-
-
-                const storagePath =
-                    `users/${currentUser.uid}/mysubject/files/${Date.now()}_${safeName}`;
-
-
-                const fileRef =
-                    storageRef(
-                        storage,
-                        storagePath
-                    );
-
-
-                /*
-                    uploadBytesResumable
-                    memungkinkan progress
-                    upload secara real-time.
-                */
-
-                const uploadTask =
-                    uploadBytesResumable(
-                        fileRef,
-                        file
-                    );
-
-
-                const downloadURL =
-                    await new Promise(
-                        (
-                            resolve,
-                            reject
-                        )=>{
-
-                            uploadTask.on(
-
-                                "state_changed",
-
-                                snapshot=>{
-
-                                    const percent =
-                                        (
-                                            snapshot.bytesTransferred /
-                                            snapshot.totalBytes
-                                        ) * 100;
-
-
-                                    setUploadProgress(
-                                        percent,
-                                        `Mengupload... ${Math.round(percent)}%`
-                                    );
-
-                                },
-
-                                error=>{
-
-                                    reject(
-                                        error
-                                    );
-
-                                },
-
-                                async ()=>{
-
-                                    try{
-
-                                        setUploadProgress(
-                                            100,
-                                            "Upload selesai. Mengambil URL file..."
-                                        );
-
-
-                                        const url =
-                                            await getDownloadURL(
-                                                uploadTask.snapshot.ref
-                                            );
-
-
-                                        resolve(
-                                            url
-                                        );
-
-                                    }catch(error){
-
-                                        reject(
-                                            error
-                                        );
-
-                                    }
-
-                                }
-
-                            );
-
-                        }
-                    );
-
-
-                /*
-                    Setelah file masuk Storage,
-                    simpan metadata ke Realtime Database.
-                */
-
-                setUploadSuccess();
-
-
-                setUploadProgress(
-                    100,
-                    "Menyimpan informasi file ke Firebase..."
-                );
-
-
-                await cloudAdd(
-                    "files",
-                    {
-
-                        name:
-                            file.name,
-
-                        description,
-
-                        url:
-                            downloadURL,
-
-                        storagePath,
-
-                        size:
-                            file.size,
-
-                        type:
-                            file.type,
-
-                        folderId:
-                            folderId || "",
-
-                        folderName:
-                            folder?.name || "",
-
-                        category:
-                            currentCategory,
-
-                        createdAt:
-                            Date.now()
-
-                    }
-                );
-
-
-                setUploadProgress(
-                    100,
-                    "Upload berhasil! File tersimpan."
-                );
-
-
-                showToast(
-                    "File berhasil diupload ke Firebase."
-                );
-
-
-                /*
-                    Tunggu sedikit agar user
-                    sempat melihat status berhasil.
-                */
-
-                await new Promise(
-                    resolve =>
-                        setTimeout(
-                            resolve,
-                            500
-                        )
-                );
-
-
-                closeModal(
-                    "fileModal"
-                );
-
-
-                await refresh();
-
-            }catch(error){
-
-                console.error(
-                    "UPLOAD ERROR:",
-                    error
-                );
-
-
-                setUploadError(
-                    "Upload gagal: " +
-                    firebaseError(error)
-                );
-
-
-                showToast(
-                    "Upload gagal: " +
-                    firebaseError(error),
-                    "error"
-                );
-
-            }finally{
-
-                uploadSubmitBtn.disabled =
-                    false;
-
-                closeUploadModalBtn.disabled =
-                    false;
-
-                uploadSubmitBtn.textContent =
-                    "Upload";
-
-            }
-
-        }
-    );
+document.getElementById("fileForm").addEventListener("submit", async event=>{
+    event.preventDefault();
+    const input = document.getElementById("fileInput");
+    const file = input.files[0];
+    if(!file){ showToast("Pilih file terlebih dahulu.","error"); return; }
+    if(!currentUser){ showToast("Silakan login terlebih dahulu.","error"); return; }
+
+    const folderId = document.getElementById("fileFolder").value;
+    const folder = getFolder(folderId);
+    const description = document.getElementById("fileDescription").value.trim();
+    const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2,9)}`;
+
+    uploadSubmitBtn.disabled = true;
+    closeUploadModalBtn.disabled = true;
+    uploadSubmitBtn.textContent = "Menyimpan...";
+    showUploadProgress(file.name);
+    try{
+        setUploadProgress(15,"Menyimpan file ke penyimpanan perangkat...");
+        await saveLocalFile(id,file);
+        setUploadProgress(75,"Menyimpan informasi file...");
+        const storagePath = `local/${id}`;
+        const items = readLocalCollection("files");
+        items.push({
+            id, name:file.name, description, url:"",
+            storagePath, size:file.size, type:file.type,
+            folderId:folderId||"", folderName:folder?.name||"",
+            category:currentCategory, createdAt:Date.now()
+        });
+        writeLocalCollection("files",items);
+        setUploadProgress(100,"File berhasil disimpan di perangkat.");
+        uploadProgressBox.classList.add("success");
+        showToast("File berhasil disimpan secara lokal.");
+        await new Promise(resolve=>setTimeout(resolve,350));
+        closeModal("fileModal");
+        await refresh();
+    }catch(error){
+        console.error("LOCAL FILE ERROR:",error);
+        setUploadError("Gagal menyimpan file: "+(error.message||"Periksa ruang penyimpanan."));
+        showToast("Gagal menyimpan file. Coba file yang lebih kecil.","error");
+    }finally{
+        uploadSubmitBtn.disabled = false;
+        closeUploadModalBtn.disabled = false;
+        uploadSubmitBtn.textContent = "Upload";
+    }
+});
 
 
 /* =========================================================
@@ -5963,184 +5611,55 @@ document
 
 
 /* =========================================================
-   LOGOUT
+   LOGIN LOKAL
+   Catatan: login lokal bukan autentikasi aman untuk data rahasia.
 ========================================================= */
 
-logoutBtn.addEventListener(
-    "click",
-    async ()=>{
+function enterApp(username){
+    currentUser = {uid: username.replace(/[^a-z0-9_-]/g,"_")};
+    loginPage.style.display = "none";
+    appPage.style.display = "block";
+    updateCloudStatus("online","Tersimpan di perangkat ini");
+    refresh();
+}
 
-        try{
+logoutBtn.addEventListener("click",()=>{
+    currentUser = null;
+    state.folders = [];
+    state.files = [];
+    state.notes = [];
+    state.quizzes = [];
+    currentFolderId = null;
+    appPage.style.display = "none";
+    loginPage.style.display = "flex";
+    passwordInput.value = "";
+    updateCloudStatus("","Belum login");
+});
 
-            await signOut(
-                auth
-            );
-
-        }catch(error){
-
-            showToast(
-                firebaseError(error),
-                "error"
-            );
-
-        }
-
+loginForm.addEventListener("submit",event=>{
+    event.preventDefault();
+    loginError.textContent = "";
+    const username = usernameInput.value.trim().toLowerCase();
+    const password = passwordInput.value;
+    if(!usernameMap[username]){
+        loginError.textContent = "Username tidak dikenali.";
+        return;
     }
-);
-
-
-/* =========================================================
-   LOGIN
-========================================================= */
-
-loginForm.addEventListener(
-    "submit",
-    async event=>{
-
-        event.preventDefault();
-
-
-        loginError.textContent =
-            "";
-
-
-        const username =
-            usernameInput.value
-                .trim()
-                .toLowerCase();
-
-
-        const password =
-            passwordInput.value;
-
-
-        const email =
-            usernameMap[username];
-
-
-        if(!email){
-
-            loginError.textContent =
-                "Username tidak dikenali.";
-
-            return;
-
-        }
-
-
-        loginBtn.disabled =
-            true;
-
-        loginBtn.textContent =
-            "Login...";
-
-
-        try{
-
-            await signInWithEmailAndPassword(
-                auth,
-                email,
-                password
-            );
-
-
-        }catch(error){
-
-            console.error(
-                "LOGIN ERROR:",
-                error
-            );
-
-
-            loginError.textContent =
-                firebaseError(error);
-
-
-        }finally{
-
-            loginBtn.disabled =
-                false;
-
-            loginBtn.textContent =
-                "Login";
-
-        }
-
+    if(!password){
+        loginError.textContent = "Masukkan password.";
+        return;
     }
-);
-
-
-/* =========================================================
-   AUTH STATE
-========================================================= */
-
-onAuthStateChanged(
-    auth,
-    async user=>{
-
-        if(user){
-
-            currentUser =
-                user;
-
-
-            loginPage.style.display =
-                "none";
-
-
-            appPage.style.display =
-                "block";
-
-
-            updateCloudStatus(
-                "loading",
-                "Menghubungkan Firebase..."
-            );
-
-
-            await refresh();
-
-
-        }else{
-
-            currentUser =
-                null;
-
-
-            state.folders =
-                [];
-
-            state.files =
-                [];
-
-            state.notes =
-                [];
-
-            state.quizzes =
-                [];
-
-
-            currentFolderId =
-                null;
-
-
-            loginPage.style.display =
-                "flex";
-
-
-            appPage.style.display =
-                "none";
-
-
-            updateCloudStatus(
-                "",
-                "Belum login"
-            );
-
-        }
-
+    loginBtn.disabled = true;
+    loginBtn.textContent = "Login...";
+    try{
+        enterApp(username);
+    }catch(error){
+        loginError.textContent = error.message || "Gagal membuka aplikasi.";
+    }finally{
+        loginBtn.disabled = false;
+        loginBtn.textContent = "Login";
     }
-);
+});
 
 
 /* =========================================================
