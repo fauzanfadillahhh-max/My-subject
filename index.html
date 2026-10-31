@@ -803,6 +803,10 @@ button{
         white-space:nowrap;
     }
 }
+
+.quiz-question-image{display:block;max-width:100%;max-height:320px;object-fit:contain;margin:12px auto;border-radius:12px;border:1px solid #2a3657;}
+.quiz-essay-answer{width:100%;min-height:140px;padding:12px;background:#0b1122;color:#f5f7ff;border:1px solid #2a3657;border-radius:12px;resize:vertical;}
+.quiz-type-badge{display:inline-block;font-size:12px;color:#aab3c9;margin:0 0 10px;}
 </style>
 </head>
 
@@ -1501,17 +1505,28 @@ Upload
 </div>
 
 <div class="modal-group">
-
-<label>Pertanyaan</label>
-
-<textarea
-    id="quizQuestion"
-    required
-    placeholder="Tuliskan pertanyaan..."
-></textarea>
-
+<label>Jenis jawaban</label>
+<select id="quizType">
+    <option value="choice">Pilihan ganda</option>
+    <option value="essay">Essay</option>
+</select>
 </div>
 
+<div class="modal-group">
+<label>Soal (ketik teks)</label>
+<textarea id="quizQuestion" placeholder="Tuliskan pertanyaan..."></textarea>
+</div>
+
+<div class="modal-group">
+<label>Atau tambahkan foto soal</label>
+<input type="file" id="quizImageInput" accept="image/*">
+<div id="quizImagePreview" style="display:none;margin-top:10px;">
+    <img id="quizImagePreviewImg" alt="Pratinjau foto soal" style="max-width:100%;max-height:240px;border-radius:10px;border:1px solid #2a3657;">
+    <button type="button" class="close-btn" id="removeQuizImageBtn" style="margin-top:8px;">Hapus foto</button>
+</div>
+</div>
+
+<div id="quizChoiceFields">
 <div class="modal-group">
 
 <label>Jawaban A</label>
@@ -1573,6 +1588,13 @@ Upload
 
 </select>
 
+</div>
+</div>
+
+<div class="modal-group" id="quizEssayAnswerKeyField" style="display:none;">
+<label>Jawaban essay yang benar</label>
+<textarea id="quizEssayAnswerKey" placeholder="Tuliskan jawaban acuan yang akan ditampilkan setelah kuis dikirim..."></textarea>
+<small style="display:block;color:#aab3c9;margin-top:6px;">Jawaban acuan ini akan ditampilkan setelah peserta mengirim jawaban essay.</small>
 </div>
 
 <div class="modal-group">
@@ -5184,6 +5206,46 @@ document.getElementById("fileForm").addEventListener("submit", async event=>{
     }
 });
 
+/* Quiz question image / type controls */
+let quizQuestionImageData = "";
+const quizTypeSelect = document.getElementById("quizType");
+const quizChoiceFields = document.getElementById("quizChoiceFields");
+const quizImageInput = document.getElementById("quizImageInput");
+const quizImagePreview = document.getElementById("quizImagePreview");
+const quizImagePreviewImg = document.getElementById("quizImagePreviewImg");
+
+function updateQuizTypeFields(){
+    const essay = quizTypeSelect.value === "essay";
+    quizChoiceFields.style.display = essay ? "none" : "block";
+    document.getElementById("quizEssayAnswerKeyField").style.display = essay ? "block" : "none";
+    document.getElementById("quizEssayAnswerKey").required = essay;
+    ["quizA","quizB","quizC","quizD"].forEach(id=>{
+        const el=document.getElementById(id);
+        el.required=!essay;
+    });
+    document.getElementById("quizAnswer").required=!essay;
+}
+quizTypeSelect.addEventListener("change",updateQuizTypeFields);
+quizImageInput.addEventListener("change",()=>{
+    const file=quizImageInput.files && quizImageInput.files[0];
+    if(!file){quizQuestionImageData="";quizImagePreview.style.display="none";return;}
+    if(!file.type.startsWith("image/")){showToast("File harus berupa gambar.","error");quizImageInput.value="";return;}
+    if(file.size>4*1024*1024){showToast("Ukuran foto maksimal 4 MB.","error");quizImageInput.value="";return;}
+    const reader=new FileReader();
+    reader.onload=()=>{
+        quizQuestionImageData=String(reader.result||"");
+        quizImagePreviewImg.src=quizQuestionImageData;
+        quizImagePreview.style.display="block";
+    };
+    reader.readAsDataURL(file);
+});
+document.getElementById("removeQuizImageBtn").addEventListener("click",()=>{
+    quizQuestionImageData="";
+    quizImageInput.value="";
+    quizImagePreviewImg.removeAttribute("src");
+    quizImagePreview.style.display="none";
+});
+
 /* =========================================================
    QUIZ
 ========================================================= */
@@ -5202,6 +5264,10 @@ document
                 )
                 .reset();
 
+            quizQuestionImageData="";
+            quizImagePreview.style.display="none";
+            quizImagePreviewImg.removeAttribute("src");
+            updateQuizTypeFields();
 
             populateFolderSelects();
 
@@ -5241,6 +5307,14 @@ document
                 .trim();
 
 
+            const quizType =
+                document.getElementById("quizType").value;
+
+            if(!question && !quizQuestionImageData){
+                showToast("Isi teks soal atau tambahkan foto soal.","error");
+                return;
+            }
+
             const folderId =
                 document.getElementById(
                     "quizFolder"
@@ -5257,7 +5331,11 @@ document
 
                 title,
 
+                type: quizType,
+
                 question,
+
+                questionImage: quizQuestionImageData,
 
                 options:{
 
@@ -5292,9 +5370,10 @@ document
                 },
 
                 answer:
-                    document.getElementById(
-                        "quizAnswer"
-                    ).value,
+                    quizType === "choice" ? document.getElementById("quizAnswer").value : "",
+
+                essayAnswerKey:
+                    quizType === "essay" ? document.getElementById("quizEssayAnswerKey").value.trim() : "",
 
                 folderId:
                     folderId || "",
@@ -5388,44 +5467,24 @@ function openQuiz(id){
     ).innerHTML = `
 
         <div class="quiz-question">
-
-            <h4>
+            <div class="quiz-type-badge">${quiz.type === "essay" ? "Soal Essay" : "Pilihan Ganda"}</div>
+            ${quiz.question ? `<h4>${escapeHTML(quiz.question)}</h4>` : ""}
+            ${quiz.questionImage ? `<img class="quiz-question-image" src="${quiz.questionImage}" alt="Foto soal">` : ""}
+            ${quiz.type === "essay" ? `
+                <label for="runQuizEssayAnswer" style="display:block;margin:12px 0 8px;">Jawaban kamu</label>
+                <textarea id="runQuizEssayAnswer" class="quiz-essay-answer" placeholder="Tuliskan jawaban essay di sini..."></textarea>
+            ` : `
                 ${
-                    escapeHTML(
-                        quiz.question
-                    )
-                }
-            </h4>
-
-            ${
-                ["A","B","C","D"]
-                    .map(
-                        letter=>`
-
+                    ["A","B","C","D"]
+                        .map(letter=>`
                             <label class="quiz-option">
-
-                                <input
-                                    type="radio"
-                                    name="runQuizAnswer"
-                                    value="${letter}"
-                                >
-
+                                <input type="radio" name="runQuizAnswer" value="${letter}">
                                 <b>${letter}.</b>
-
-                                ${
-                                    escapeHTML(
-                                        quiz.options?.[letter] ||
-                                        ""
-                                    )
-                                }
-
+                                ${escapeHTML(quiz.options?.[letter] || "")}
                             </label>
-
-                        `
-                    )
-                    .join("")
-            }
-
+                        `).join("")
+                }
+            `}
         </div>
 
     `;
@@ -5461,6 +5520,17 @@ document
                     "quizResult"
                 );
 
+            if(runningQuiz.type === "essay"){
+                const essayAnswer=document.getElementById("runQuizEssayAnswer")?.value.trim() || "";
+                if(!essayAnswer){
+                    result.style.display="block";
+                    result.textContent="Tuliskan jawaban essay terlebih dahulu.";
+                    return;
+                }
+                result.style.display="block";
+                result.innerHTML=`<b>Jawaban kamu:</b><br>${escapeHTML(essayAnswer).replace(/\\n/g,"<br>")}<br><br><b>Jawaban yang benar:</b><br>${escapeHTML(runningQuiz.essayAnswerKey || "Jawaban acuan belum ditambahkan.").replace(/\\n/g,"<br>")}`;
+                return;
+            }
 
             if(!selected){
 
