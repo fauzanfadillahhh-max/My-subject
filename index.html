@@ -806,6 +806,11 @@ button{
 
 .quiz-question-image{display:block;max-width:100%;max-height:320px;object-fit:contain;margin:12px auto;border-radius:12px;border:1px solid #2a3657;}
 .quiz-essay-answer{width:100%;min-height:140px;padding:12px;background:#0b1122;color:#f5f7ff;border:1px solid #2a3657;border-radius:12px;resize:vertical;}
+.quiz-answer-photo-tools{margin-top:12px;}
+.quiz-answer-photo-preview{display:none;margin-top:10px;}
+.quiz-answer-photo-preview img{display:block;max-width:100%;max-height:320px;object-fit:contain;margin:8px auto;border-radius:10px;border:1px solid #2a3657;}
+.quiz-answer-photo-result{display:block;max-width:100%;max-height:360px;object-fit:contain;margin:12px auto;border-radius:10px;border:1px solid #2a3657;}
+
 .quiz-type-badge{display:inline-block;font-size:12px;color:#aab3c9;margin:0 0 10px;}
 </style>
 </head>
@@ -1594,7 +1599,13 @@ Upload
 <div class="modal-group" id="quizEssayAnswerKeyField" style="display:none;">
 <label>Jawaban essay yang benar</label>
 <textarea id="quizEssayAnswerKey" placeholder="Tuliskan jawaban acuan yang akan ditampilkan setelah kuis dikirim..."></textarea>
-<small style="display:block;color:#aab3c9;margin-top:6px;">Jawaban acuan ini akan ditampilkan setelah peserta mengirim jawaban essay.</small>
+<label for="quizEssayAnswerKeyPhotoInput" style="display:block;margin:12px 0 8px;">Atau tambahkan foto kunci jawaban</label>
+<input type="file" id="quizEssayAnswerKeyPhotoInput" accept="image/*">
+<div id="quizEssayAnswerKeyPhotoPreview" style="display:none;margin-top:10px;">
+<img id="quizEssayAnswerKeyPhotoPreviewImg" alt="Pratinjau foto kunci jawaban essay" style="display:block;max-width:100%;max-height:240px;object-fit:contain;border-radius:10px;border:1px solid #2a3657;">
+<button type="button" id="removeQuizEssayAnswerKeyPhotoBtn" class="secondary-btn" style="margin-top:8px;">Hapus foto kunci jawaban</button>
+</div>
+<small style="display:block;color:#aab3c9;margin-top:6px;">Kunci jawaban dapat berupa teks, foto, atau keduanya. Kunci ini akan ditampilkan setelah peserta mengirim jawaban essay.</small>
 </div>
 
 <div class="modal-group">
@@ -1798,6 +1809,7 @@ let editingFolderId = null;
 let editingNoteId = null;
 
 let runningQuiz = null;
+let runningQuizEssayPhotoData = "";
 
 
 /* =========================================================
@@ -5226,6 +5238,42 @@ function updateQuizTypeFields(){
     document.getElementById("quizAnswer").required=!essay;
 }
 quizTypeSelect.addEventListener("change",updateQuizTypeFields);
+
+/* Essay answer-key photo upload */
+let quizEssayAnswerKeyPhotoData = "";
+const quizEssayAnswerKeyPhotoInput = document.getElementById("quizEssayAnswerKeyPhotoInput");
+const quizEssayAnswerKeyPhotoPreview = document.getElementById("quizEssayAnswerKeyPhotoPreview");
+const quizEssayAnswerKeyPhotoPreviewImg = document.getElementById("quizEssayAnswerKeyPhotoPreviewImg");
+
+function resetQuizEssayAnswerKeyPhoto(){
+    quizEssayAnswerKeyPhotoData = "";
+    quizEssayAnswerKeyPhotoInput.value = "";
+    quizEssayAnswerKeyPhotoPreviewImg.removeAttribute("src");
+    quizEssayAnswerKeyPhotoPreview.style.display = "none";
+}
+quizEssayAnswerKeyPhotoInput.addEventListener("change",()=>{
+    const file=quizEssayAnswerKeyPhotoInput.files && quizEssayAnswerKeyPhotoInput.files[0];
+    if(!file){resetQuizEssayAnswerKeyPhoto();return;}
+    if(!file.type.startsWith("image/")){
+        showToast("File kunci jawaban harus berupa gambar.","error");
+        resetQuizEssayAnswerKeyPhoto();
+        return;
+    }
+    if(file.size>4*1024*1024){
+        showToast("Ukuran foto kunci jawaban maksimal 4 MB.","error");
+        resetQuizEssayAnswerKeyPhoto();
+        return;
+    }
+    const reader=new FileReader();
+    reader.onload=()=>{
+        quizEssayAnswerKeyPhotoData=String(reader.result||"");
+        quizEssayAnswerKeyPhotoPreviewImg.src=quizEssayAnswerKeyPhotoData;
+        quizEssayAnswerKeyPhotoPreview.style.display="block";
+    };
+    reader.readAsDataURL(file);
+});
+document.getElementById("removeQuizEssayAnswerKeyPhotoBtn").addEventListener("click",resetQuizEssayAnswerKeyPhoto);
+
 quizImageInput.addEventListener("change",()=>{
     const file=quizImageInput.files && quizImageInput.files[0];
     if(!file){quizQuestionImageData="";quizImagePreview.style.display="none";return;}
@@ -5267,6 +5315,7 @@ document
             quizQuestionImageData="";
             quizImagePreview.style.display="none";
             quizImagePreviewImg.removeAttribute("src");
+            resetQuizEssayAnswerKeyPhoto();
             updateQuizTypeFields();
 
             populateFolderSelects();
@@ -5375,6 +5424,9 @@ document
                 essayAnswerKey:
                     quizType === "essay" ? document.getElementById("quizEssayAnswerKey").value.trim() : "",
 
+                essayAnswerKeyPhoto:
+                    quizType === "essay" ? quizEssayAnswerKeyPhotoData : "",
+
                 folderId:
                     folderId || "",
 
@@ -5442,6 +5494,7 @@ function openQuiz(id){
 
     runningQuiz =
         quiz;
+    runningQuizEssayPhotoData = "";
 
 
     document.getElementById(
@@ -5473,6 +5526,15 @@ function openQuiz(id){
             ${quiz.type === "essay" ? `
                 <label for="runQuizEssayAnswer" style="display:block;margin:12px 0 8px;">Jawaban kamu</label>
                 <textarea id="runQuizEssayAnswer" class="quiz-essay-answer" placeholder="Tuliskan jawaban essay di sini..."></textarea>
+                <div class="quiz-answer-photo-tools">
+                    <label for="runQuizEssayPhotoInput" style="display:block;margin:12px 0 8px;">Atau tambahkan foto jawaban</label>
+                    <input type="file" id="runQuizEssayPhotoInput" accept="image/*">
+                    <small style="display:block;color:#aab3c9;margin-top:6px;">Foto tulisan tangan atau gambar jawaban. Maksimal 4 MB.</small>
+                    <div id="runQuizEssayPhotoPreview" class="quiz-answer-photo-preview">
+                        <img id="runQuizEssayPhotoPreviewImg" alt="Pratinjau foto jawaban essay">
+                        <button type="button" class="close-btn" id="removeRunQuizEssayPhotoBtn">Hapus foto</button>
+                    </div>
+                </div>
             ` : `
                 ${
                     ["A","B","C","D"]
@@ -5489,6 +5551,50 @@ function openQuiz(id){
 
     `;
 
+
+    const essayPhotoInput = document.getElementById("runQuizEssayPhotoInput");
+    const essayPhotoPreview = document.getElementById("runQuizEssayPhotoPreview");
+    const essayPhotoPreviewImg = document.getElementById("runQuizEssayPhotoPreviewImg");
+    const removeEssayPhotoBtn = document.getElementById("removeRunQuizEssayPhotoBtn");
+
+    if(essayPhotoInput){
+        essayPhotoInput.addEventListener("change",()=>{
+            const file = essayPhotoInput.files && essayPhotoInput.files[0];
+            if(!file){
+                runningQuizEssayPhotoData = "";
+                essayPhotoPreview.style.display = "none";
+                essayPhotoPreviewImg.removeAttribute("src");
+                return;
+            }
+            if(!file.type.startsWith("image/")){
+                showToast("File harus berupa gambar.","error");
+                essayPhotoInput.value = "";
+                return;
+            }
+            if(file.size > 4 * 1024 * 1024){
+                showToast("Ukuran foto maksimal 4 MB.","error");
+                essayPhotoInput.value = "";
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = ()=>{
+                runningQuizEssayPhotoData = String(reader.result || "");
+                essayPhotoPreviewImg.src = runningQuizEssayPhotoData;
+                essayPhotoPreview.style.display = "block";
+            };
+            reader.onerror = ()=>{
+                showToast("Foto gagal dibaca. Silakan pilih ulang.","error");
+            };
+            reader.readAsDataURL(file);
+        });
+
+        removeEssayPhotoBtn.addEventListener("click",()=>{
+            runningQuizEssayPhotoData = "";
+            essayPhotoInput.value = "";
+            essayPhotoPreviewImg.removeAttribute("src");
+            essayPhotoPreview.style.display = "none";
+        });
+    }
 
     openModal(
         "quizRunModal"
@@ -5522,13 +5628,32 @@ document
 
             if(runningQuiz.type === "essay"){
                 const essayAnswer=document.getElementById("runQuizEssayAnswer")?.value.trim() || "";
-                if(!essayAnswer){
+                const essayPhoto=runningQuizEssayPhotoData || "";
+                if(!essayAnswer && !essayPhoto){
                     result.style.display="block";
-                    result.textContent="Tuliskan jawaban essay terlebih dahulu.";
+                    result.textContent="Tuliskan jawaban essay atau tambahkan foto jawaban terlebih dahulu.";
                     return;
                 }
+
+                const answerText = essayAnswer
+                    ? escapeHTML(essayAnswer).replace(/\\n/g,"<br>")
+                    : "<i>Jawaban dikirim melalui foto.</i>";
+                const answerPhoto = essayPhoto
+                    ? `<img class="quiz-answer-photo-result" src="${essayPhoto}" alt="Foto jawaban essay yang dikirim">`
+                    : "";
+
+                const correctAnswerText = runningQuiz.essayAnswerKey
+                    ? escapeHTML(runningQuiz.essayAnswerKey).replace(/\\n/g,"<br>")
+                    : "";
+                const correctAnswerPhoto = runningQuiz.essayAnswerKeyPhoto
+                    ? `<img class="quiz-answer-photo-result" src="${runningQuiz.essayAnswerKeyPhoto}" alt="Foto kunci jawaban essay">`
+                    : "";
+                const correctAnswerContent = correctAnswerText || correctAnswerPhoto
+                    ? `${correctAnswerText}${correctAnswerText && correctAnswerPhoto ? "<br>" : ""}${correctAnswerPhoto}`
+                    : "Kunci jawaban belum ditambahkan.";
+
                 result.style.display="block";
-                result.innerHTML=`<b>Jawaban kamu:</b><br>${escapeHTML(essayAnswer).replace(/\\n/g,"<br>")}<br><br><b>Jawaban yang benar:</b><br>${escapeHTML(runningQuiz.essayAnswerKey || "Jawaban acuan belum ditambahkan.").replace(/\\n/g,"<br>")}`;
+                result.innerHTML=`<b>Jawaban kamu:</b><br>${answerText}${answerPhoto}<br><br><b>Jawaban yang benar:</b><br>${correctAnswerContent}`;
                 return;
             }
 
