@@ -804,6 +804,7 @@ button{
     }
 }
 
+.quiz-card{cursor:grab;} .quiz-card:active{cursor:grabbing;} .quiz-dragging{opacity:.45;outline:2px dashed var(--accent,#7c8cff);}
 .quiz-question-image{display:block;max-width:100%;max-height:320px;object-fit:contain;margin:12px auto;border-radius:12px;border:1px solid #2a3657;}
 .quiz-essay-answer{width:100%;min-height:140px;padding:12px;background:#0b1122;color:#f5f7ff;border:1px solid #2a3657;border-radius:12px;resize:vertical;}
 .quiz-answer-photo-tools{margin-top:12px;}
@@ -1492,7 +1493,7 @@ Upload
 
 <div class="modal">
 
-<h2>Tambah Kuis</h2>
+<h2 id="quizModalTitle">Tambah Kuis</h2>
 
 <form id="quizForm">
 
@@ -1807,9 +1808,15 @@ let currentFolderId = null;
 let editingFolderId = null;
 
 let editingNoteId = null;
+let editingQuizId = null;
 
 let runningQuiz = null;
 let runningQuizEssayPhotoData = "";
+let runningQuizSequence = [];
+let runningQuizSequenceIndex = 0;
+let runningQuizItems = [];
+let quizSequenceTimer = null;
+let draggedQuizId = null;
 
 
 /* =========================================================
@@ -2454,6 +2461,126 @@ function getFolderFullName(
 
 }
 
+
+/* =========================================================
+   RENAME / MOVE HELPERS
+========================================================= */
+function folderDestinationOptions(category, excludeIds=[]){
+    return state.folders
+        .filter(f=>f.category===category && !excludeIds.includes(f.id))
+        .map(f=>({id:f.id,label:getFolderFullName(f.id)}));
+}
+function chooseFolderDestination(category, currentId="", excludeIds=[]){
+    const options=[{id:"",label:"📁 Root / Tanpa kelompok"},...folderDestinationOptions(category,excludeIds)];
+    const promptText="Pilih tujuan dengan mengetik nomor:\n"+options.map((o,i)=>`${i+1}. ${o.label}`).join("\n");
+    const answer=window.prompt(promptText, String(Math.max(1,options.findIndex(o=>o.id===(currentId||""))+1)));
+    if(answer===null) return null;
+    const index=Number(answer)-1;
+    if(!Number.isInteger(index)||index<0||index>=options.length){showToast("Nomor tujuan tidak valid.","error");return null;}
+    return options[index].id;
+}
+async function renameFileRecord(file){
+    const oldName=file.name||"";
+    const newName=window.prompt("Nama file/video baru (ekstensi boleh tetap):",oldName);
+    if(newName===null) return;
+    const clean=newName.trim();
+    if(!clean){showToast("Nama tidak boleh kosong.","error");return;}
+    try{
+        await cloudUpdate("files",file.id,{name:clean});
+        showToast("Nama file/video berhasil diubah.");
+        await refresh();
+    }catch(error){showToast(firebaseError(error),"error");}
+}
+async function moveFileRecord(file){
+    const destination=chooseFolderDestination(file.category||currentCategory,file.folderId||"");
+    if(destination===null) return;
+    try{
+        const folder=getFolder(destination);
+        await cloudUpdate("files",file.id,{folderId:destination,folderName:folder?.name||""});
+        showToast("File berhasil dipindahkan.");
+        await refresh();
+    }catch(error){showToast(firebaseError(error),"error");}
+}
+async function moveFolderRecord(folder){
+    const descendants=[folder.id,...getDescendantFolderIds(folder.id)];
+    const destination=chooseFolderDestination(folder.category,folder.parentId||"",descendants);
+    if(destination===null) return;
+    if(destination===folder.id||descendants.includes(destination)){showToast("Folder tidak bisa dipindahkan ke dirinya sendiri atau subfoldernya.","error");return;}
+    try{
+        await cloudUpdate("folders",folder.id,{parentId:destination||null});
+        showToast("Folder berhasil dipindahkan.");
+        await refresh();
+    }catch(error){showToast(firebaseError(error),"error");}
+}
+async function moveQuizRecord(quiz){
+    const destination=chooseFolderDestination(quiz.category||currentCategory,quiz.folderId||"");
+    if(destination===null) return;
+    try{
+        const folder=getFolder(destination);
+        await cloudUpdate("quizzes",quiz.id,{folderId:destination,folderName:folder?.name||""});
+        showToast("Kuis berhasil dipindahkan.");
+        await refresh();
+    }catch(error){showToast(firebaseError(error),"error");}
+}
+async function shiftQuizOrder(quiz,delta){
+    const siblings=state.quizzes.filter(q=>(q.folderId||"")===(quiz.folderId||"")&&q.category===quiz.category)
+        .sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
+    const index=siblings.findIndex(q=>q.id===quiz.id), other=siblings[index+delta];
+    if(index<0||!other)return;
+    try{
+        const orderA=Number(quiz.order)||index, orderB=Number(other.order)||index+delta;
+        await Promise.all([
+            cloudUpdate("quizzes",quiz.id,{order:orderB}),
+            cloudUpdate("quizzes",other.id,{order:orderA})
+        ]);
+        await refresh();
+    }catch(error){showToast(firebaseError(error),"error");}
+}
+
+async function combineQuizGroup(quiz){
+    const candidates=state.quizzes.filter(q=>(q.folderId||"")===(quiz.folderId||"")&&q.category===quiz.category)
+        .sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
+    if(candidates.length<2){showToast("Minimal perlu dua kuis dalam kategori/folder yang sama.","error");return;}
+    const list=candidates.map((q,i)=>`${i+1}. ${q.title||q.question||"Kuis tanpa judul"}${q.id===quiz.id?" (kuis ini)":""}`).join("\n");
+    const defaultSelection=candidates.map((q,i)=>q.id===quiz.id?String(i+1):"").filter(Boolean).join(",");
+    const answer=window.prompt("Masukkan nomor kuis yang ingin digabung, pisahkan dengan koma. Urutan nomor menentukan urutan pengerjaan:\n\n"+list,defaultSelection);
+    if(answer===null)return;
+    const indices=[...new Set(answer.split(/[ ,;]+/).map(x=>parseInt(x,10)-1).filter(i=>Number.isInteger(i)&&i>=0&&i<candidates.length))];
+    if(indices.length<2){showToast("Pilih minimal dua nomor kuis yang valid.","error");return;}
+    const groupId="quizgroup_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);
+    const chosen=indices.map(i=>candidates[i]);
+    try{
+        await Promise.all(chosen.map((q,i)=>cloudUpdate("quizzes",q.id,{combineGroup:groupId,combineOrder:i})));
+        showToast(`${chosen.length} kuis berhasil digabung. Urutan mengikuti nomor yang dipilih.`);
+        await refresh();
+    }catch(error){showToast(firebaseError(error),"error");}
+}
+async function uncombineQuizGroup(quiz){
+    if(!quiz.combineGroup){showToast("Kuis ini belum tergabung.");return;}
+    const group=state.quizzes.filter(q=>q.combineGroup===quiz.combineGroup);
+    if(!confirm(`Pisahkan rangkaian ini? ${group.length} kuis akan kembali menjadi kuis mandiri.`))return;
+    try{
+        await Promise.all(group.map(q=>cloudUpdate("quizzes",q.id,{combineGroup:null,combineOrder:null})));
+        showToast("Rangkaian kuis berhasil dipisahkan.");
+        await refresh();
+    }catch(error){showToast(firebaseError(error),"error");}
+}
+async function persistQuizDragOrder(sourceId,targetId){
+    if(!sourceId||!targetId||sourceId===targetId)return;
+    const source=state.quizzes.find(q=>q.id===sourceId), target=state.quizzes.find(q=>q.id===targetId);
+    if(!source||!target||source.category!==target.category||(source.folderId||"")!==(target.folderId||"")){
+        showToast("Kuis hanya bisa diurutkan dalam folder dan kategori yang sama.","error");return;
+    }
+    const siblings=state.quizzes.filter(q=>q.category===source.category&&(q.folderId||"")===(source.folderId||""))
+        .sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
+    const from=siblings.findIndex(q=>q.id===sourceId), to=siblings.findIndex(q=>q.id===targetId);
+    if(from<0||to<0)return;
+    const [moved]=siblings.splice(from,1);siblings.splice(to,0,moved);
+    try{
+        await Promise.all(siblings.map((q,i)=>cloudUpdate("quizzes",q.id,{order:i})));
+        showToast("Urutan kuis berhasil diubah.");await refresh();
+    }catch(error){showToast(firebaseError(error),"error");}
+}
 
 /* =========================================================
    REFRESH ALL DATA
@@ -3199,6 +3326,7 @@ function render(){
                         >
                             ✏️ Edit
                         </button>
+                        <button class="small-btn move-folder" data-id="${escapeHTML(folder.id)}">📂 Pindah</button>
 
                         <button
                             class="small-btn danger delete-folder"
@@ -3290,6 +3418,8 @@ function render(){
                             🔗 Buka
                         </a>
 
+                        <button class="small-btn rename-file" data-id="${escapeHTML(file.id)}">✏️ Rename</button>
+                        <button class="small-btn move-file" data-id="${escapeHTML(file.id)}">📂 Pindah</button>
                         <button
                             class="small-btn danger delete-file"
                             data-id="${
@@ -3413,15 +3543,22 @@ function render(){
                 &&
                 quiz.category ===
                 currentCategory
-        );
+        ).sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
 
 
     quizzes.forEach(
         quiz=>{
+            if(quiz.combineGroup){
+                const combined=quizzes.filter(q=>q.combineGroup===quiz.combineGroup)
+                    .sort((a,b)=>(Number(a.combineOrder)||0)-(Number(b.combineOrder)||0));
+                if(combined[0]?.id!==quiz.id)return;
+                quiz={...quiz,title:`Quiz Gabungan (${combined.length} quiz)`,
+                    question:combined.map((q,i)=>`${i+1}. ${q.title||q.question||"Quiz tanpa judul"}`).join(" • ")};
+            }
 
             cards.push(`
 
-                <div class="card">
+                <div class="card quiz-card" draggable="true" data-quiz-id="${escapeHTML(quiz.id)}">
 
                     <div class="card-icon">
                         ❓
@@ -3465,6 +3602,13 @@ function render(){
                         >
                             ▶ Kerjakan
                         </button>
+                        <button class="small-btn edit-quiz" data-id="${escapeHTML(quiz.id)}">✏️ Edit</button>
+                        ${quiz.combineGroup ? `<button class="small-btn edit-combined-quiz" data-group="${escapeHTML(quiz.combineGroup)}">📝 Edit anggota</button>` : ""}
+                        <button class="small-btn move-quiz" data-id="${escapeHTML(quiz.id)}">📂 Pindah</button>
+                        <button class="small-btn combine-quiz" data-id="${escapeHTML(quiz.id)}">🔗 Gabungkan</button>
+                        ${quiz.combineGroup ? `<button class="small-btn uncombine-quiz" data-id="${escapeHTML(quiz.id)}">⛓️ Pisahkan</button>` : ""}
+                        <button class="small-btn quiz-up" data-id="${escapeHTML(quiz.id)}" title="Geser ke atas">↑</button>
+                        <button class="small-btn quiz-down" data-id="${escapeHTML(quiz.id)}" title="Geser ke bawah">↓</button>
 
                         <button
                             class="small-btn danger delete-quiz"
@@ -3664,6 +3808,7 @@ function renderSearchResults(
                             >
                                 ✏️ Edit
                             </button>
+                            <button class="small-btn move-folder" data-id="${escapeHTML(folder.id)}">📂 Pindah</button>
 
                         </div>
 
@@ -3763,6 +3908,8 @@ function renderSearchResults(
                             >
                                 🔗 Buka
                             </a>
+                            <button class="small-btn rename-file" data-id="${escapeHTML(file.id)}">✏️ Rename</button>
+                            <button class="small-btn move-file" data-id="${escapeHTML(file.id)}">📂 Pindah</button>
 
                         </div>
 
@@ -3910,10 +4057,17 @@ function renderSearchResults(
         )
         .forEach(
             quiz=>{
+                if(quiz.combineGroup){
+                    const combined=state.quizzes.filter(q=>q.combineGroup===quiz.combineGroup)
+                        .sort((a,b)=>(Number(a.combineOrder)||0)-(Number(b.combineOrder)||0));
+                    if(combined[0]?.id!==quiz.id)return;
+                    quiz={...quiz,title:`Quiz Gabungan (${combined.length} quiz)`,
+                        question:combined.map((q,i)=>`${i+1}. ${q.title||q.question||"Quiz tanpa judul"}`).join(" • ")};
+                }
 
                 cards.push(`
 
-                    <div class="card">
+                    <div class="card quiz-card" draggable="true" data-quiz-id="${escapeHTML(quiz.id)}">
 
                         <div class="card-icon">
                             ❓
@@ -3957,6 +4111,13 @@ function renderSearchResults(
                             >
                                 ▶ Kerjakan
                             </button>
+                            <button class="small-btn edit-quiz" data-id="${escapeHTML(quiz.id)}">✏️ Edit</button>
+                        ${quiz.combineGroup ? `<button class="small-btn edit-combined-quiz" data-group="${escapeHTML(quiz.combineGroup)}">📝 Edit anggota</button>` : ""}
+                            <button class="small-btn move-quiz" data-id="${escapeHTML(quiz.id)}">📂 Pindah</button>
+                            <button class="small-btn combine-quiz" data-id="${escapeHTML(quiz.id)}">🔗 Gabungkan</button>
+                            ${quiz.combineGroup ? `<button class="small-btn uncombine-quiz" data-id="${escapeHTML(quiz.id)}">⛓️ Pisahkan</button>` : ""}
+                            <button class="small-btn quiz-up" data-id="${escapeHTML(quiz.id)}">↑</button>
+                            <button class="small-btn quiz-down" data-id="${escapeHTML(quiz.id)}">↓</button>
 
                         </div>
 
@@ -4409,6 +4570,25 @@ async function deleteFolderTree(
    CONTENT CLICK
 ========================================================= */
 
+contentGrid.addEventListener("dragstart",event=>{
+    const card=event.target.closest(".quiz-card");if(!card)return;
+    draggedQuizId=card.dataset.quizId;event.dataTransfer.effectAllowed="move";
+    event.dataTransfer.setData("text/plain",draggedQuizId);card.classList.add("quiz-dragging");
+});
+contentGrid.addEventListener("dragend",event=>{
+    event.target.closest(".quiz-card")?.classList.remove("quiz-dragging");draggedQuizId=null;
+    contentGrid.querySelectorAll(".quiz-drop-target").forEach(el=>el.classList.remove("quiz-drop-target"));
+});
+contentGrid.addEventListener("dragover",event=>{
+    const card=event.target.closest(".quiz-card");if(!card||!draggedQuizId)return;
+    event.preventDefault();event.dataTransfer.dropEffect="move";
+});
+contentGrid.addEventListener("drop",async event=>{
+    const card=event.target.closest(".quiz-card");if(!card||!draggedQuizId)return;
+    event.preventDefault();const targetId=card.dataset.quizId;const sourceId=draggedQuizId;draggedQuizId=null;
+    await persistQuizDragOrder(sourceId,targetId);
+});
+
 contentGrid.addEventListener(
     "click",
     async event=>{
@@ -4764,6 +4944,87 @@ contentGrid.addEventListener(
 
         }
 
+
+        const renameFileBtn=event.target.closest(".rename-file");
+        if(renameFileBtn){
+            const file=state.files.find(x=>x.id===renameFileBtn.dataset.id);
+            if(file) await renameFileRecord(file);
+            return;
+        }
+        const moveFileBtn=event.target.closest(".move-file");
+        if(moveFileBtn){
+            const file=state.files.find(x=>x.id===moveFileBtn.dataset.id);
+            if(file) await moveFileRecord(file);
+            return;
+        }
+        const moveFolderBtn=event.target.closest(".move-folder");
+        if(moveFolderBtn){
+            const folder=getFolder(moveFolderBtn.dataset.id);
+            if(folder) await moveFolderRecord(folder);
+            return;
+        }
+        const moveQuizBtn=event.target.closest(".move-quiz");
+        if(moveQuizBtn){
+            const quiz=state.quizzes.find(x=>x.id===moveQuizBtn.dataset.id);
+            if(quiz) await moveQuizRecord(quiz);
+            return;
+        }
+        const quizUpBtn=event.target.closest(".quiz-up");
+        if(quizUpBtn){
+            const quiz=state.quizzes.find(x=>x.id===quizUpBtn.dataset.id);
+            if(quiz) await shiftQuizOrder(quiz,-1);
+            return;
+        }
+        const quizDownBtn=event.target.closest(".quiz-down");
+        if(quizDownBtn){
+            const quiz=state.quizzes.find(x=>x.id===quizDownBtn.dataset.id);
+            if(quiz) await shiftQuizOrder(quiz,1);
+            return;
+        }
+        const combineQuizBtn=event.target.closest(".combine-quiz");
+        if(combineQuizBtn){const quiz=state.quizzes.find(x=>x.id===combineQuizBtn.dataset.id);if(quiz)await combineQuizGroup(quiz);return;}
+        const uncombineQuizBtn=event.target.closest(".uncombine-quiz");
+        if(uncombineQuizBtn){const quiz=state.quizzes.find(x=>x.id===uncombineQuizBtn.dataset.id);if(quiz)await uncombineQuizGroup(quiz);return;}
+        const editCombinedBtn=event.target.closest(".edit-combined-quiz");
+        if(editCombinedBtn){
+            const members=state.quizzes.filter(q=>q.combineGroup===editCombinedBtn.dataset.group)
+                .sort((a,b)=>(Number(a.combineOrder)||0)-(Number(b.combineOrder)||0));
+            const choice=window.prompt("Pilih nomor quiz yang ingin diedit:\\n\\n"+members.map((q,i)=>`${i+1}. ${q.title||q.question||"Quiz tanpa judul"}`).join("\\n"),"1");
+            if(choice===null)return;
+            const selected=members[parseInt(choice,10)-1];
+            if(!selected){showToast("Nomor quiz tidak valid.","error");return;}
+            const temp=document.createElement("button");
+            temp.className="edit-quiz";temp.dataset.id=selected.id;temp.style.display="none";
+            contentGrid.appendChild(temp);temp.click();temp.remove();
+            return;
+        }
+        const editQuizBtn=event.target.closest(".edit-quiz");
+        if(editQuizBtn){
+            const quiz=state.quizzes.find(x=>x.id===editQuizBtn.dataset.id);
+            if(!quiz)return;
+            editingQuizId=quiz.id;
+            document.getElementById("quizModalTitle").textContent="Edit Kuis";
+            document.getElementById("quizForm").reset();
+            document.getElementById("quizTitle").value=quiz.title||"";
+            document.getElementById("quizType").value=quiz.type||"choice";
+            document.getElementById("quizQuestion").value=quiz.question||"";
+            ["A","B","C","D"].forEach(letter=>document.getElementById("quiz"+letter).value=quiz.options?.[letter]||"");
+            document.getElementById("quizAnswer").value=quiz.answer||"A";
+            document.getElementById("quizEssayAnswerKey").value=quiz.essayAnswerKey||"";
+            quizQuestionImageData=quiz.questionImage||"";
+            quizImageInput.value="";
+            if(quizQuestionImageData){quizImagePreviewImg.src=quizQuestionImageData;quizImagePreview.style.display="block";}
+            else {quizImagePreviewImg.removeAttribute("src");quizImagePreview.style.display="none";}
+            quizEssayAnswerKeyPhotoData=quiz.essayAnswerKeyPhoto||"";
+            quizEssayAnswerKeyPhotoInput.value="";
+            if(quizEssayAnswerKeyPhotoData){quizEssayAnswerKeyPhotoPreviewImg.src=quizEssayAnswerKeyPhotoData;quizEssayAnswerKeyPhotoPreview.style.display="block";}
+            else {quizEssayAnswerKeyPhotoPreviewImg.removeAttribute("src");quizEssayAnswerKeyPhotoPreview.style.display="none";}
+            populateFolderSelects(quiz.folderId||"","","");
+            document.getElementById("quizFolder").value=quiz.folderId||"";
+            updateQuizTypeFields();
+            openModal("quizModal");
+            return;
+        }
 
         const deleteFile =
             event.target.closest(
@@ -5306,6 +5567,8 @@ document
         "click",
         ()=>{
 
+            editingQuizId=null;
+            document.getElementById("quizModalTitle").textContent="Tambah Kuis";
             document
                 .getElementById(
                     "quizForm"
@@ -5437,22 +5700,24 @@ document
                     currentCategory,
 
                 createdAt:
-                    Date.now()
+                    Date.now(),
+
+                order: editingQuizId ? (state.quizzes.find(q=>q.id===editingQuizId)?.order||0) :
+                    Math.max(-1,...state.quizzes.filter(q=>(q.folderId||"")===(folderId||"")&&q.category===currentCategory).map(q=>Number(q.order)||0))+1
 
             };
 
 
             try{
 
-                await cloudAdd(
-                    "quizzes",
-                    data
-                );
-
-
-                showToast(
-                    "Kuis berhasil dibuat."
-                );
+                if(editingQuizId){
+                    await cloudUpdate("quizzes",editingQuizId,data);
+                    showToast("Kuis berhasil diperbarui.");
+                    editingQuizId=null;
+                }else{
+                    await cloudAdd("quizzes",data);
+                    showToast("Kuis berhasil dibuat.");
+                }
 
 
                 closeModal(
@@ -5479,7 +5744,8 @@ document
    RUN QUIZ
 ========================================================= */
 
-function openQuiz(id){
+function openQuiz(id, sequence=null, sequenceIndex=0){
+    if(quizSequenceTimer){clearTimeout(quizSequenceTimer);quizSequenceTimer=null;}
 
     const quiz =
         state.quizzes.find(
@@ -5492,28 +5758,48 @@ function openQuiz(id){
         return;
 
 
-    runningQuiz =
-        quiz;
+    runningQuiz = quiz;
+    if(quiz.combineGroup){
+        runningQuizItems=state.quizzes.filter(q=>q.combineGroup===quiz.combineGroup)
+            .sort((a,b)=>(Number(a.combineOrder)||0)-(Number(b.combineOrder)||0));
+    }else{
+        runningQuizItems=[quiz];
+    }
+    // Combined quizzes are rendered and answered together, not as a sequence of separate screens.
+    runningQuizSequence=[];
+    runningQuizSequenceIndex=0;
     runningQuizEssayPhotoData = "";
 
+    const isCombinedQuiz=runningQuizItems.length>1;
+    document.getElementById("runQuizTitle").textContent =
+        isCombinedQuiz ? `Quiz gabungan (${runningQuizItems.length} soal)` : quiz.title;
 
-    document.getElementById(
-        "runQuizTitle"
-    ).textContent =
-        quiz.title;
+    document.getElementById("quizResult").style.display="none";
+    document.getElementById("quizResult").innerHTML="";
 
-
-    document.getElementById(
-        "quizResult"
-    ).style.display =
-        "none";
-
-
-    document.getElementById(
-        "quizResult"
-    ).innerHTML =
-        "";
-
+    if(isCombinedQuiz){
+        document.getElementById("quizRunContent").innerHTML=runningQuizItems.map((item,index)=>`
+            <div class="quiz-question combined-quiz-question" data-combined-quiz-id="${escapeHTML(item.id)}" style="margin-bottom:18px;">
+                <div class="quiz-type-badge">Soal ${index+1} dari ${runningQuizItems.length} · ${item.type==="essay"?"Essay":"Pilihan Ganda"}</div>
+                ${item.question ? `<h4>${escapeHTML(item.question)}</h4>` : ""}
+                ${item.questionImage ? `<img class="quiz-question-image" src="${item.questionImage}" alt="Foto soal ${index+1}">` : ""}
+                ${item.type==="essay" ? `
+                    <label for="combinedEssay_${escapeHTML(item.id)}" style="display:block;margin:12px 0 8px;">Jawaban kamu</label>
+                    <textarea id="combinedEssay_${escapeHTML(item.id)}" class="quiz-essay-answer combined-essay-answer" data-quiz-id="${escapeHTML(item.id)}" placeholder="Tuliskan jawaban essay di sini..."></textarea>
+                ` : `
+                    ${["A","B","C","D"].map(letter=>`
+                        <label class="quiz-option">
+                            <input type="radio" name="combinedAnswer_${escapeHTML(item.id)}" value="${letter}">
+                            <b>${letter}.</b>
+                            ${escapeHTML(item.options?.[letter]||"")}
+                        </label>
+                    `).join("")}
+                `}
+            </div>
+        `).join("");
+        openModal("quizRunModal");
+        return;
+    }
 
     document.getElementById(
         "quizRunContent"
@@ -5603,6 +5889,39 @@ function openQuiz(id){
 }
 
 
+function addQuizSequenceContinueButton(result){
+    if(runningQuizSequence.length<=1)return;
+    if(quizSequenceTimer){clearTimeout(quizSequenceTimer);quizSequenceTimer=null;}
+    const nextIndex=runningQuizSequenceIndex+1;
+    const button=document.createElement("button");
+    button.type="button";button.className="save-btn";button.style.marginTop="12px";
+    const advance=()=>{
+        if(quizSequenceTimer){clearTimeout(quizSequenceTimer);quizSequenceTimer=null;}
+        if(nextIndex<runningQuizSequence.length){
+            openQuiz(runningQuizSequence[nextIndex],runningQuizSequence,nextIndex);
+        }else{
+            closeModal("quizRunModal");showToast("Rangkaian kuis selesai!");
+        }
+    };
+    if(nextIndex<runningQuizSequence.length){
+        button.textContent=`Lanjut sekarang (${nextIndex+1}/${runningQuizSequence.length})`;
+    }else{
+        button.textContent="Selesaikan rangkaian sekarang";
+    }
+    button.addEventListener("click",advance);
+    result.appendChild(document.createElement("br"));
+    result.appendChild(document.createTextNode("Soal berikutnya akan terbuka otomatis dalam 3 detik. "));
+    result.appendChild(button);
+    quizSequenceTimer=setTimeout(advance,3000);
+}
+
+// Hentikan auto-lanjut jika pengguna menutup modal secara manual.
+document.addEventListener("click",event=>{
+    if(event.target.closest('[data-close="quizRunModal"]')&&quizSequenceTimer){
+        clearTimeout(quizSequenceTimer);quizSequenceTimer=null;
+    }
+});
+
 document
     .getElementById(
         "submitQuizBtn"
@@ -5615,15 +5934,48 @@ document
                 return;
 
 
-            const selected =
-                document.querySelector(
-                    'input[name="runQuizAnswer"]:checked'
-                );
-
-
             const result =
                 document.getElementById(
                     "quizResult"
+                );
+
+            if(Array.isArray(runningQuizItems) && runningQuizItems.length>1){
+                const answers=[];
+                let unanswered=false;
+                runningQuizItems.forEach((item,index)=>{
+                    if(item.type==="essay"){
+                        const answer=document.getElementById(`combinedEssay_${item.id}`)?.value.trim()||"";
+                        if(!answer)unanswered=true;
+                        answers.push({item,index,answer});
+                    }else{
+                        const selected=document.querySelector(`input[name="combinedAnswer_${item.id}"]:checked`);
+                        if(!selected)unanswered=true;
+                        answers.push({item,index,answer:selected?.value||""});
+                    }
+                });
+                if(unanswered){
+                    result.style.display="block";
+                    result.textContent="Jawab semua soal terlebih dahulu sebelum memeriksa hasil.";
+                    return;
+                }
+                result.style.display="block";
+                result.innerHTML=answers.map(({item,index,answer})=>{
+                    const question=escapeHTML(item.question||`Soal ${index+1}`);
+                    if(item.type==="essay"){
+                        const key=item.essayAnswerKey
+                            ? `<br><b>Kunci jawaban:</b><br>${escapeHTML(item.essayAnswerKey).replace(/\n/g,"<br>")}`
+                            : "";
+                        return `<div style="margin-bottom:12px;"><b>Soal ${index+1}:</b> ${question}<br><b>Jawaban kamu:</b><br>${escapeHTML(answer).replace(/\n/g,"<br>")}${key}</div>`;
+                    }
+                    const isCorrect=answer===item.answer;
+                    return `<div style="margin-bottom:12px;"><b>Soal ${index+1}:</b> ${question}<br>${isCorrect?"🎉 <b>Benar!</b>":"❌ <b>Salah.</b>"}<br><b>Jawaban kamu:</b> ${escapeHTML(answer)}<br><b>Jawaban benar:</b> ${escapeHTML(item.answer||"")}</div>`;
+                }).join("");
+                return;
+            }
+
+            const selected =
+                document.querySelector(
+                    'input[name="runQuizAnswer"]:checked'
                 );
 
             if(runningQuiz.type === "essay"){
@@ -5654,6 +6006,7 @@ document
 
                 result.style.display="block";
                 result.innerHTML=`<b>Jawaban kamu:</b><br>${answerText}${answerPhoto}<br><br><b>Jawaban yang benar:</b><br>${correctAnswerContent}`;
+                addQuizSequenceContinueButton(result);
                 return;
             }
 
@@ -5694,6 +6047,7 @@ document
                     )}</b>`;
 
             }
+            addQuizSequenceContinueButton(result);
 
         }
     );
