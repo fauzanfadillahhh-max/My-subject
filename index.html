@@ -813,6 +813,18 @@ button{
 .quiz-answer-photo-result{display:block;max-width:100%;max-height:360px;object-fit:contain;margin:12px auto;border-radius:10px;border:1px solid #2a3657;}
 
 .quiz-type-badge{display:inline-block;font-size:12px;color:#aab3c9;margin:0 0 10px;}
+
+/* Combined quiz cards: vivid but still consistent with the app */
+.quiz-combined-card{position:relative;overflow:hidden;border:1px solid rgba(139,125,255,.42)!important;background:linear-gradient(145deg,rgba(91,76,190,.20),rgba(23,32,57,.97) 58%,rgba(35,88,119,.24))!important;box-shadow:0 12px 28px rgba(7,10,25,.22),inset 0 1px 0 rgba(255,255,255,.06)}
+.quiz-combined-card:before{content:"";position:absolute;inset:0 0 auto;height:4px;background:linear-gradient(90deg,#8b7dff,#55d6be,#69a9ff)}
+.quiz-combined-card .card-icon{width:54px;height:54px;border-radius:17px;display:flex;align-items:center;justify-content:center;font-size:26px;background:linear-gradient(135deg,rgba(139,125,255,.25),rgba(85,214,190,.16));border:1px solid rgba(171,160,255,.3)}
+.quiz-combined-card .card-title{font-size:18px;font-weight:750;letter-spacing:.1px;color:#f4f2ff}
+.quiz-combined-card .card-description{line-height:1.55;color:#c5cbe0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.combined-count-pill{display:inline-flex;align-items:center;padding:5px 10px;border-radius:999px;background:rgba(139,125,255,.17);border:1px solid rgba(160,148,255,.35);color:#dcd7ff;font-size:12px;font-weight:700}
+.quiz-combined-card .run-quiz{background:linear-gradient(135deg,#7666e8,#4d9fe8)!important;border:0!important;color:#fff!important;font-weight:700}
+.quiz-combined-card .rename-combined-quiz{border-color:rgba(139,125,255,.45)!important;color:#d9d3ff!important}
+@media(max-width:600px){.quiz-combined-card{padding:16px!important;border-radius:18px!important}.quiz-combined-card .card-actions{gap:7px;flex-wrap:wrap}.combined-count-pill{font-size:11px}}
+
 </style>
 </head>
 
@@ -2537,6 +2549,21 @@ async function shiftQuizOrder(quiz,delta){
     }catch(error){showToast(firebaseError(error),"error");}
 }
 
+async function renameQuizGroup(groupId){
+    const members=state.quizzes.filter(q=>q.combineGroup===groupId);
+    if(!members.length)return;
+    const current=members[0].combineTitle||`Quiz Gabungan (${members.length} quiz)`;
+    const name=window.prompt("Masukkan nama untuk quiz gabungan:",current);
+    if(name===null)return;
+    const clean=name.trim();
+    if(!clean){showToast("Nama quiz gabungan tidak boleh kosong.","error");return;}
+    try{
+        await Promise.all(members.map(q=>cloudUpdate("quizzes",q.id,{combineTitle:clean})));
+        showToast("Nama quiz gabungan berhasil diperbarui.");
+        await refresh();
+    }catch(error){showToast(firebaseError(error),"error");}
+}
+
 async function combineQuizGroup(quiz){
     const candidates=state.quizzes.filter(q=>(q.folderId||"")===(quiz.folderId||"")&&q.category===quiz.category)
         .sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
@@ -3552,16 +3579,16 @@ function render(){
                 const combined=quizzes.filter(q=>q.combineGroup===quiz.combineGroup)
                     .sort((a,b)=>(Number(a.combineOrder)||0)-(Number(b.combineOrder)||0));
                 if(combined[0]?.id!==quiz.id)return;
-                quiz={...quiz,title:`Quiz Gabungan (${combined.length} quiz)`,
-                    question:combined.map((q,i)=>`${i+1}. ${q.title||q.question||"Quiz tanpa judul"}`).join(" • ")};
+                quiz={...quiz,title:quiz.combineTitle||`Quiz Gabungan (${combined.length} quiz)`,
+                    question:combined.map((q,i)=>`${i+1}. ${q.title||q.question||"Quiz tanpa judul"}`).join(" • "),_combinedCount:combined.length};
             }
 
             cards.push(`
 
-                <div class="card quiz-card" draggable="true" data-quiz-id="${escapeHTML(quiz.id)}">
+                <div class="card quiz-card ${quiz.combineGroup ? "quiz-combined-card" : ""}" draggable="true" data-quiz-id="${escapeHTML(quiz.id)}">
 
-                    <div class="card-icon">
-                        ❓
+                    <div class="card-icon ${quiz.combineGroup ? "combined-card-icon" : ""}">
+                        ${quiz.combineGroup ? "🧩" : "❓"}
                     </div>
 
                     <div class="card-title">
@@ -3603,7 +3630,7 @@ function render(){
                             ▶ Kerjakan
                         </button>
                         <button class="small-btn edit-quiz" data-id="${escapeHTML(quiz.id)}">✏️ Edit</button>
-                        ${quiz.combineGroup ? `<button class="small-btn edit-combined-quiz" data-group="${escapeHTML(quiz.combineGroup)}">📝 Edit anggota</button>` : ""}
+                        ${quiz.combineGroup ? `<span class="combined-count-pill">${quiz._combinedCount||state.quizzes.filter(q=>q.combineGroup===quiz.combineGroup).length} quiz</span><button class="small-btn rename-combined-quiz" data-group="${escapeHTML(quiz.combineGroup)}">✏️ Nama gabungan</button><button class="small-btn edit-combined-quiz" data-group="${escapeHTML(quiz.combineGroup)}">📝 Edit anggota</button>` : ""}
                         <button class="small-btn move-quiz" data-id="${escapeHTML(quiz.id)}">📂 Pindah</button>
                         <button class="small-btn combine-quiz" data-id="${escapeHTML(quiz.id)}">🔗 Gabungkan</button>
                         ${quiz.combineGroup ? `<button class="small-btn uncombine-quiz" data-id="${escapeHTML(quiz.id)}">⛓️ Pisahkan</button>` : ""}
@@ -4061,13 +4088,13 @@ function renderSearchResults(
                     const combined=state.quizzes.filter(q=>q.combineGroup===quiz.combineGroup)
                         .sort((a,b)=>(Number(a.combineOrder)||0)-(Number(b.combineOrder)||0));
                     if(combined[0]?.id!==quiz.id)return;
-                    quiz={...quiz,title:`Quiz Gabungan (${combined.length} quiz)`,
-                        question:combined.map((q,i)=>`${i+1}. ${q.title||q.question||"Quiz tanpa judul"}`).join(" • ")};
+                    quiz={...quiz,title:quiz.combineTitle||`Quiz Gabungan (${combined.length} quiz)`,
+                        question:combined.map((q,i)=>`${i+1}. ${q.title||q.question||"Quiz tanpa judul"}`).join(" • "),_combinedCount:combined.length};
                 }
 
                 cards.push(`
 
-                    <div class="card quiz-card" draggable="true" data-quiz-id="${escapeHTML(quiz.id)}">
+                    <div class="card quiz-card ${quiz.combineGroup ? "quiz-combined-card" : ""}" draggable="true" data-quiz-id="${escapeHTML(quiz.id)}">
 
                         <div class="card-icon">
                             ❓
@@ -4112,7 +4139,7 @@ function renderSearchResults(
                                 ▶ Kerjakan
                             </button>
                             <button class="small-btn edit-quiz" data-id="${escapeHTML(quiz.id)}">✏️ Edit</button>
-                        ${quiz.combineGroup ? `<button class="small-btn edit-combined-quiz" data-group="${escapeHTML(quiz.combineGroup)}">📝 Edit anggota</button>` : ""}
+                        ${quiz.combineGroup ? `<span class="combined-count-pill">${quiz._combinedCount||state.quizzes.filter(q=>q.combineGroup===quiz.combineGroup).length} quiz</span><button class="small-btn rename-combined-quiz" data-group="${escapeHTML(quiz.combineGroup)}">✏️ Nama gabungan</button><button class="small-btn edit-combined-quiz" data-group="${escapeHTML(quiz.combineGroup)}">📝 Edit anggota</button>` : ""}
                             <button class="small-btn move-quiz" data-id="${escapeHTML(quiz.id)}">📂 Pindah</button>
                             <button class="small-btn combine-quiz" data-id="${escapeHTML(quiz.id)}">🔗 Gabungkan</button>
                             ${quiz.combineGroup ? `<button class="small-btn uncombine-quiz" data-id="${escapeHTML(quiz.id)}">⛓️ Pisahkan</button>` : ""}
@@ -4981,6 +5008,8 @@ contentGrid.addEventListener(
             if(quiz) await shiftQuizOrder(quiz,1);
             return;
         }
+        const renameCombinedBtn=event.target.closest(".rename-combined-quiz");
+        if(renameCombinedBtn){await renameQuizGroup(renameCombinedBtn.dataset.group);return;}
         const combineQuizBtn=event.target.closest(".combine-quiz");
         if(combineQuizBtn){const quiz=state.quizzes.find(x=>x.id===combineQuizBtn.dataset.id);if(quiz)await combineQuizGroup(quiz);return;}
         const uncombineQuizBtn=event.target.closest(".uncombine-quiz");
