@@ -1830,6 +1830,7 @@ let runningQuizEssayPhotoData = "";
 let runningQuizSequence = [];
 let runningQuizSequenceIndex = 0;
 let runningQuizItems = [];
+let combinedQuizReviewState = null;
 let quizSequenceTimer = null;
 let draggedQuizId = null;
 
@@ -5845,6 +5846,7 @@ function openQuiz(id, sequence=null, sequenceIndex=0){
 
     document.getElementById("quizResult").style.display="none";
     document.getElementById("quizResult").innerHTML="";
+    combinedQuizReviewState=null;
 
     if(isCombinedQuiz){
         document.getElementById("quizRunContent").innerHTML=runningQuizItems.map((item,index)=>`
@@ -5958,6 +5960,57 @@ function openQuiz(id, sequence=null, sequenceIndex=0){
 }
 
 
+function renderCombinedQuizReview(result, mode="all", currentIndex=0){
+    if(!combinedQuizReviewState)return;
+    const answers=combinedQuizReviewState;
+    const total=answers.length;
+    const index=Math.max(0,Math.min(currentIndex,total-1));
+    const multipleChoiceAnswers=answers.filter(entry=>entry.item.type!=="essay");
+    const correctCount=multipleChoiceAnswers.filter(entry=>entry.answer===entry.item.answer).length;
+    const wrongCount=multipleChoiceAnswers.length-correctCount;
+    const scoreSummary=multipleChoiceAnswers.length ? `<div class="quiz-score-summary" style="display:flex;gap:10px;flex-wrap:wrap;padding:12px;margin:0 0 14px;border:1px solid #394766;border-radius:10px;">
+        <b>Hasil Pilihan Ganda:</b>
+        <span>Jumlah soal: ${multipleChoiceAnswers.length}</span>
+        <span style="color:#54d68b;">✓ Benar: ${correctCount}</span>
+        <span style="color:#ff7777;">✗ Salah: ${wrongCount}</span>
+    </div>` : "";
+    const renderItem=({item,index,answer})=>{
+        const question=escapeHTML(item.question||`Soal ${index+1}`);
+        const questionImage=item.questionImage
+            ? `<img class="quiz-question-image" src="${escapeHTML(item.questionImage)}" alt="Gambar soal ${index+1}">`
+            : "";
+        if(item.type==="essay"){
+            const key=item.essayAnswerKey
+                ? `<br><b>Kunci jawaban:</b><br>${escapeHTML(item.essayAnswerKey).replace(/\n/g,"<br>")}`
+                : `<br><i>Kunci jawaban belum ditambahkan.</i>`;
+            return `<div class="combined-review-card" style="padding:14px;margin:10px 0;border:1px solid #394766;border-radius:10px;">
+                <b>Soal ${index+1}:</b> ${question}${questionImage}<br><b>Jawaban kamu:</b><br>${escapeHTML(answer).replace(/\n/g,"<br>")}${key}</div>`;
+        }
+        const isCorrect=answer===item.answer;
+        return `<div class="combined-review-card" style="padding:14px;margin:10px 0;border:1px solid #394766;border-radius:10px;">
+            <b>Soal ${index+1}:</b> ${question}${questionImage}<br>${isCorrect?"🎉 <b>Benar!</b>":"❌ <b>Salah.</b>"}<br>
+            <b>Jawaban kamu:</b> ${escapeHTML(answer)}<br><b>Jawaban benar:</b> ${escapeHTML(item.answer||"")}</div>`;
+    };
+    const toggle=`<div class="quiz-review-toolbar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        <button type="button" class="save-btn" data-review-mode="all" style="${mode==="all"?"opacity:1":"opacity:.65"}">Semua soal</button>
+        <button type="button" class="save-btn" data-review-mode="single" style="${mode==="single"?"opacity:1":"opacity:.65"}">Tinjau satu per satu</button>
+    </div>`;
+    let content="";
+    if(mode==="single"){
+        content=renderItem(answers[index])+`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0;">
+            <button type="button" class="close-btn" data-review-prev ${index===0?"disabled":""}>Sebelumnya</button>
+            <b>Soal ${index+1} dari ${total}</b>
+            <button type="button" class="save-btn" data-review-next ${index===total-1?"disabled":""}>Berikutnya</button>
+        </div>`;
+    }else{
+        content=answers.map(renderItem).join("");
+    }
+    result.innerHTML=scoreSummary+toggle+content;
+    result.querySelectorAll("[data-review-mode]").forEach(button=>button.addEventListener("click",()=>renderCombinedQuizReview(result,button.dataset.reviewMode,index)));
+    result.querySelector("[data-review-prev]")?.addEventListener("click",()=>renderCombinedQuizReview(result,"single",index-1));
+    result.querySelector("[data-review-next]")?.addEventListener("click",()=>renderCombinedQuizReview(result,"single",index+1));
+}
+
 function addQuizSequenceContinueButton(result){
     if(runningQuizSequence.length<=1)return;
     if(quizSequenceTimer){clearTimeout(quizSequenceTimer);quizSequenceTimer=null;}
@@ -6028,17 +6081,8 @@ document
                     return;
                 }
                 result.style.display="block";
-                result.innerHTML=answers.map(({item,index,answer})=>{
-                    const question=escapeHTML(item.question||`Soal ${index+1}`);
-                    if(item.type==="essay"){
-                        const key=item.essayAnswerKey
-                            ? `<br><b>Kunci jawaban:</b><br>${escapeHTML(item.essayAnswerKey).replace(/\n/g,"<br>")}`
-                            : "";
-                        return `<div style="margin-bottom:12px;"><b>Soal ${index+1}:</b> ${question}<br><b>Jawaban kamu:</b><br>${escapeHTML(answer).replace(/\n/g,"<br>")}${key}</div>`;
-                    }
-                    const isCorrect=answer===item.answer;
-                    return `<div style="margin-bottom:12px;"><b>Soal ${index+1}:</b> ${question}<br>${isCorrect?"🎉 <b>Benar!</b>":"❌ <b>Salah.</b>"}<br><b>Jawaban kamu:</b> ${escapeHTML(answer)}<br><b>Jawaban benar:</b> ${escapeHTML(item.answer||"")}</div>`;
-                }).join("");
+                combinedQuizReviewState=answers;
+                renderCombinedQuizReview(result,"all",0);
                 return;
             }
 
@@ -6101,20 +6145,21 @@ document
                 "block";
 
 
+            const scoreSummary = `<div class="quiz-score-summary" style="display:flex;gap:10px;flex-wrap:wrap;padding:12px;margin-bottom:12px;border:1px solid #394766;border-radius:10px;">
+                <b>Hasil Pilihan Ganda:</b>
+                <span>Jumlah soal: 1</span>
+                <span style="color:#54d68b;">✓ Benar: ${correct?1:0}</span>
+                <span style="color:#ff7777;">✗ Salah: ${correct?0:1}</span>
+            </div>`;
+
             if(correct){
-
-                result.innerHTML =
+                result.innerHTML = scoreSummary+
                     "🎉 <b>Benar!</b><br>Jawaban kamu tepat.";
-
             }else{
-
-                result.innerHTML =
+                result.innerHTML = scoreSummary+
                     `❌ <b>Salah.</b><br>
                     Jawaban yang benar:
-                    <b>${escapeHTML(
-                        runningQuiz.answer
-                    )}</b>`;
-
+                    <b>${escapeHTML(runningQuiz.answer)}</b>`;
             }
             addQuizSequenceContinueButton(result);
 
@@ -6544,7 +6589,7 @@ try {
 } catch(error) {
   console.error("Firebase initialization error:",error);
   const errorBox = document.getElementById("loginError");
-  if(errorBox) errorBox.textContent = "Firebase gagaal dimulai. Periksa koneksi internet dan konfigurasi.";
+  if(errorBox) errorBox.textContent = "Firebase gagal dimulai. Periksa koneksi internet dan konfigurasi.";
 }
 </script>
 
