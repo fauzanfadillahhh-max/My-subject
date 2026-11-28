@@ -6101,14 +6101,14 @@ document
                 }
 
                 const answerText = essayAnswer
-                    ? escapeHTML(essayAnswer).replace(/\\n/g,"<br>")
+                    ? escapeHTML(essayAnswer).replace(/\r?\n/g,"<br>")
                     : "<i>Jawaban dikirim melalui foto.</i>";
                 const answerPhoto = essayPhoto
                     ? `<img class="quiz-answer-photo-result" src="${essayPhoto}" alt="Foto jawaban essay yang dikirim">`
                     : "";
 
                 const correctAnswerText = runningQuiz.essayAnswerKey
-                    ? escapeHTML(runningQuiz.essayAnswerKey).replace(/\\n/g,"<br>")
+                    ? escapeHTML(runningQuiz.essayAnswerKey).replace(/\r?\n/g,"<br>")
                     : "";
                 const correctAnswerPhoto = runningQuiz.essayAnswerKeyPhoto
                     ? `<img class="quiz-answer-photo-result" src="${runningQuiz.essayAnswerKeyPhoto}" alt="Foto kunci jawaban essay">`
