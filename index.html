@@ -1831,6 +1831,9 @@ let runningQuizSequence = [];
 let runningQuizSequenceIndex = 0;
 let runningQuizItems = [];
 let combinedQuizReviewState = null;
+let combinedQuizDraftAnswers = {};
+let combinedQuizTakeMode = "all";
+let combinedQuizTakeIndex = 0;
 let quizSequenceTimer = null;
 let draggedQuizId = null;
 
@@ -5814,6 +5817,69 @@ document
    RUN QUIZ
 ========================================================= */
 
+function renderCombinedQuizTaking(){
+    const host=document.getElementById("quizRunContent");
+    const total=runningQuizItems.length;
+    if(!total)return;
+    const renderItem=(item,index)=>{
+        const saved=combinedQuizDraftAnswers[item.id]||"";
+        const questionImage=item.questionImage
+            ? `<img class="quiz-question-image" src="${escapeHTML(item.questionImage)}" alt="Foto soal ${index+1}">`
+            : "";
+        const body=item.type==="essay" ? `
+            <label for="combinedEssay_${escapeHTML(item.id)}" style="display:block;margin:12px 0 8px;">Jawaban kamu</label>
+            <textarea id="combinedEssay_${escapeHTML(item.id)}" class="quiz-essay-answer combined-essay-answer" data-quiz-id="${escapeHTML(item.id)}" placeholder="Tuliskan jawaban essay di sini...">${escapeHTML(saved)}</textarea>
+        ` : ["A","B","C","D"].map(letter=>`
+            <label class="quiz-option">
+                <input type="radio" name="combinedAnswer_${escapeHTML(item.id)}" value="${letter}" ${saved===letter?"checked":""}>
+                <b>${letter}.</b> ${escapeHTML(item.options?.[letter]||"")}
+            </label>
+        `).join("");
+        return `<div class="quiz-question combined-quiz-question" data-combined-quiz-id="${escapeHTML(item.id)}" style="margin-bottom:18px;">
+            <div class="quiz-type-badge">Soal ${index+1} dari ${total} · ${item.type==="essay"?"Essay":"Pilihan Ganda"}</div>
+            ${item.question ? `<h4>${escapeHTML(item.question)}</h4>` : ""}${questionImage}${body}
+        </div>`;
+    };
+    const toolbar=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        <button type="button" class="save-btn" data-take-mode="all" style="${combinedQuizTakeMode==="all"?"opacity:1":"opacity:.65"}">Kerjakan semua soal</button>
+        <button type="button" class="save-btn" data-take-mode="single" style="${combinedQuizTakeMode==="single"?"opacity:1":"opacity:.65"}">Kerjakan satu per satu</button>
+    </div>`;
+    let content="";
+    if(combinedQuizTakeMode==="single"){
+        const index=Math.max(0,Math.min(combinedQuizTakeIndex,total-1));
+        combinedQuizTakeIndex=index;
+        content=renderItem(runningQuizItems[index],index)+`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0;">
+            <button type="button" class="close-btn" data-take-prev ${index===0?"disabled":""}>Sebelumnya</button>
+            <b>Soal ${index+1} dari ${total}</b>
+            <button type="button" class="save-btn" data-take-next ${index===total-1?"disabled":""}>Berikutnya</button>
+        </div>`;
+    }else{
+        content=runningQuizItems.map((item,index)=>renderItem(item,index)).join("");
+    }
+    host.innerHTML=toolbar+content;
+    host.querySelectorAll("[data-take-mode]").forEach(button=>button.addEventListener("click",()=>{
+        combinedQuizTakeMode=button.dataset.takeMode;
+        renderCombinedQuizTaking();
+    }));
+    host.querySelector("[data-take-prev]")?.addEventListener("click",()=>{
+        combinedQuizTakeIndex--;
+        renderCombinedQuizTaking();
+    });
+    host.querySelector("[data-take-next]")?.addEventListener("click",()=>{
+        combinedQuizTakeIndex++;
+        renderCombinedQuizTaking();
+    });
+    host.querySelectorAll(".combined-essay-answer").forEach(input=>input.addEventListener("input",()=>{
+        combinedQuizDraftAnswers[input.dataset.quizId]=input.value;
+    }));
+    host.querySelectorAll('input[type="radio"][name^="combinedAnswer_"]').forEach(input=>input.addEventListener("change",()=>{
+        if(input.checked){
+            const id=input.name.slice("combinedAnswer_".length);
+            combinedQuizDraftAnswers[id]=input.value;
+        }
+    }));
+}
+
 function openQuiz(id, sequence=null, sequenceIndex=0){
     if(quizSequenceTimer){clearTimeout(quizSequenceTimer);quizSequenceTimer=null;}
 
@@ -5849,25 +5915,10 @@ function openQuiz(id, sequence=null, sequenceIndex=0){
     combinedQuizReviewState=null;
 
     if(isCombinedQuiz){
-        document.getElementById("quizRunContent").innerHTML=runningQuizItems.map((item,index)=>`
-            <div class="quiz-question combined-quiz-question" data-combined-quiz-id="${escapeHTML(item.id)}" style="margin-bottom:18px;">
-                <div class="quiz-type-badge">Soal ${index+1} dari ${runningQuizItems.length} · ${item.type==="essay"?"Essay":"Pilihan Ganda"}</div>
-                ${item.question ? `<h4>${escapeHTML(item.question)}</h4>` : ""}
-                ${item.questionImage ? `<img class="quiz-question-image" src="${item.questionImage}" alt="Foto soal ${index+1}">` : ""}
-                ${item.type==="essay" ? `
-                    <label for="combinedEssay_${escapeHTML(item.id)}" style="display:block;margin:12px 0 8px;">Jawaban kamu</label>
-                    <textarea id="combinedEssay_${escapeHTML(item.id)}" class="quiz-essay-answer combined-essay-answer" data-quiz-id="${escapeHTML(item.id)}" placeholder="Tuliskan jawaban essay di sini..."></textarea>
-                ` : `
-                    ${["A","B","C","D"].map(letter=>`
-                        <label class="quiz-option">
-                            <input type="radio" name="combinedAnswer_${escapeHTML(item.id)}" value="${letter}">
-                            <b>${letter}.</b>
-                            ${escapeHTML(item.options?.[letter]||"")}
-                        </label>
-                    `).join("")}
-                `}
-            </div>
-        `).join("");
+        combinedQuizDraftAnswers={};
+        combinedQuizTakeMode="all";
+        combinedQuizTakeIndex=0;
+        renderCombinedQuizTaking();
         openModal("quizRunModal");
         return;
     }
@@ -5980,11 +6031,17 @@ function renderCombinedQuizReview(result, mode="all", currentIndex=0){
             ? `<img class="quiz-question-image" src="${escapeHTML(item.questionImage)}" alt="Gambar soal ${index+1}">`
             : "";
         if(item.type==="essay"){
-            const key=item.essayAnswerKey
-                ? `<br><b>Kunci jawaban:</b><br>${escapeHTML(item.essayAnswerKey).replace(/\n/g,"<br>")}`
+            const keyText=item.essayAnswerKey
+                ? escapeHTML(item.essayAnswerKey).replace(/\r?\n/g,"<br>")
+                : "";
+            const keyImage=item.essayAnswerKeyPhoto
+                ? `<img class="quiz-answer-photo-result" src="${escapeHTML(item.essayAnswerKeyPhoto)}" alt="Foto kunci jawaban essay">`
+                : "";
+            const key=keyText||keyImage
+                ? `<br><b>Kunci jawaban:</b><br>${keyText}${keyText&&keyImage?"<br>":""}${keyImage}`
                 : `<br><i>Kunci jawaban belum ditambahkan.</i>`;
             return `<div class="combined-review-card" style="padding:14px;margin:10px 0;border:1px solid #394766;border-radius:10px;">
-                <b>Soal ${index+1}:</b> ${question}${questionImage}<br><b>Jawaban kamu:</b><br>${escapeHTML(answer).replace(/\n/g,"<br>")}${key}</div>`;
+                <b>Soal ${index+1}:</b> ${question}${questionImage}<br><b>Jawaban kamu:</b><br>${escapeHTML(answer).replace(/\r?\n/g,"<br>")}${key}</div>`;
         }
         const isCorrect=answer===item.answer;
         return `<div class="combined-review-card" style="padding:14px;margin:10px 0;border:1px solid #394766;border-radius:10px;">
@@ -6066,13 +6123,15 @@ document
                 let unanswered=false;
                 runningQuizItems.forEach((item,index)=>{
                     if(item.type==="essay"){
-                        const answer=document.getElementById(`combinedEssay_${item.id}`)?.value.trim()||"";
+                        const answer=(document.getElementById(`combinedEssay_${item.id}`)?.value ?? combinedQuizDraftAnswers[item.id] ?? "").trim();
+                        combinedQuizDraftAnswers[item.id]=answer;
                         if(!answer)unanswered=true;
                         answers.push({item,index,answer});
                     }else{
                         const selected=document.querySelector(`input[name="combinedAnswer_${item.id}"]:checked`);
-                        if(!selected)unanswered=true;
-                        answers.push({item,index,answer:selected?.value||""});
+                        const answer=selected?.value || combinedQuizDraftAnswers[item.id] || "";
+                        if(!answer)unanswered=true;
+                        answers.push({item,index,answer});
                     }
                 });
                 if(unanswered){
